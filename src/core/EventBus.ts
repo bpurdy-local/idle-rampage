@@ -55,6 +55,7 @@ export const GameEvents = {
   GAME_LOADED: 'game_loaded',
   APP_BACKGROUNDED: 'app_backgrounded',
   APP_FOREGROUNDED: 'app_foregrounded',
+  LUCKY_DROP: 'lucky_drop',
 } as const;
 
 export type GameEventType = typeof GameEvents[keyof typeof GameEvents];

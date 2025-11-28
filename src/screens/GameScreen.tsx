@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import {useGameStore} from '../stores/gameStore';
 import {useGameLoop} from '../hooks/useGameLoop';
-import {ResourceDisplay, EnemyDisplay, BuildingCard, PrestigePanel, DailyRewardModal, DamagePopupManager} from '../components/game';
+import {ResourceDisplay, EnemyDisplay, BuildingCard, PrestigePanel, DailyRewardModal, OfflineEarningsModal, LuckyDropNotification, DamagePopupManager} from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
+import {luckyDropSystem, DropResult} from '../systems/LuckyDropSystem';
+import {BoostState} from '../core/GameState';
 import {useDamagePopups} from '../hooks/useDamagePopups';
 import {BUILDINGS} from '../data/buildings';
 import {BuildingType, calculateUpgradeCost, calculateProduction} from '../models/Building';
@@ -27,9 +29,17 @@ const TAP_COOLDOWN_MS = 150;
 export const GameScreen: React.FC = () => {
   const [showPrestige, setShowPrestige] = useState(false);
   const [showDailyReward, setShowDailyReward] = useState(false);
+  const [showOfflineEarnings, setShowOfflineEarnings] = useState(false);
   const [pendingReward, setPendingReward] = useState<DailyRewardCheckResult | null>(null);
+  const [offlineData, setOfflineData] = useState<{
+    offlineTime: number;
+    earnings: number;
+    productionRate: number;
+  } | null>(null);
+  const [activeDrop, setActiveDrop] = useState<DropResult | null>(null);
   const lastTapTimeRef = useRef<number>(0);
   const enemyAreaRef = useRef<{x: number; y: number}>({x: 200, y: 250});
+  const hasCheckedOfflineEarnings = useRef(false);
 
   const {popups, spawnPopup, removePopup} = useDamagePopups();
 
@@ -62,10 +72,37 @@ export const GameScreen: React.FC = () => {
     addScrap,
     addBlueprints,
     addBuilders,
+    addBoost,
   } = useGameStore();
 
   // Calculate prestige bonuses
   const prestigeBonuses = prestigeSystem.calculateBonuses(player.prestigeUpgrades);
+
+  // Handle lucky drop rewards
+  const applyDropReward = useCallback((drop: DropResult) => {
+    switch (drop.drop.type) {
+      case 'scrap':
+        addScrap(drop.scaledAmount);
+        break;
+      case 'blueprints':
+        addBlueprints(drop.scaledAmount);
+        break;
+      case 'builder':
+        addBuilders(drop.scaledAmount);
+        break;
+      case 'boost':
+        if (drop.drop.boostDuration) {
+          const boost: BoostState = {
+            id: `lucky_boost_${Date.now()}`,
+            multiplier: 2,
+            remainingDuration: drop.drop.boostDuration * 1000,
+          };
+          addBoost(boost);
+        }
+        break;
+    }
+    setActiveDrop(drop);
+  }, [addScrap, addBlueprints, addBuilders, addBoost]);
 
   // Game tick
   const handleTick = useCallback(
@@ -123,6 +160,13 @@ export const GameScreen: React.FC = () => {
             1,
           );
           setScrap(player.scrap + reward.totalScrap);
+
+          // Roll for lucky drop
+          const dropResult = luckyDropSystem.rollForDrop(currentWave, combat.currentEnemy.reward);
+          if (dropResult) {
+            applyDropReward(dropResult);
+          }
+
           // Reset combat state before advancing wave
           setCombatActive(false);
           setCurrentEnemy(null);
@@ -155,6 +199,7 @@ export const GameScreen: React.FC = () => {
       setCombatActive,
       setCurrentEnemy,
       setWaveTimer,
+      applyDropReward,
     ],
   );
 
@@ -182,6 +227,62 @@ export const GameScreen: React.FC = () => {
       setPendingReward(result);
       setShowDailyReward(true);
     }
+  }, []);
+
+  // Check for offline earnings on mount
+  useEffect(() => {
+    if (hasCheckedOfflineEarnings.current) return;
+    hasCheckedOfflineEarnings.current = true;
+
+    const checkOfflineEarnings = async () => {
+      const loadResult = await saveService.load();
+
+      if (loadResult.success && loadResult.wasOffline && loadResult.offlineTime) {
+        const offlineSeconds = loadResult.offlineTime / 1000;
+
+        const productionBonuses = {
+          waveBonus: productionSystem.calculateWaveBonus(currentWave),
+          prestigeBonus: prestigeBonuses.productionMultiplier,
+          boostMultiplier: 1,
+          commandCenterBonus: productionSystem.calculateCommandCenterBonus(buildings),
+        };
+
+        const productionRate = productionSystem.getTotalProductionPerSecond(
+          buildings,
+          productionBonuses,
+        );
+
+        const earnings = productionSystem.calculateOfflineProduction(
+          buildings,
+          productionBonuses,
+          offlineSeconds,
+        );
+
+        if (earnings > 0) {
+          addScrap(earnings);
+
+          setOfflineData({
+            offlineTime: loadResult.offlineTime,
+            earnings,
+            productionRate,
+          });
+          setShowOfflineEarnings(true);
+        }
+      }
+    };
+
+    checkOfflineEarnings();
+  }, [buildings, currentWave, prestigeBonuses, productionSystem, addScrap]);
+
+  // Handle collecting offline earnings
+  const handleCollectOfflineEarnings = useCallback(() => {
+    setShowOfflineEarnings(false);
+    setOfflineData(null);
+  }, []);
+
+  // Handle drop notification complete
+  const handleDropNotificationComplete = useCallback(() => {
+    setActiveDrop(null);
   }, []);
 
   // Handle claiming daily reward
@@ -330,6 +431,14 @@ export const GameScreen: React.FC = () => {
 
       <DamagePopupManager popups={popups} onPopupComplete={removePopup} />
 
+      {activeDrop && (
+        <LuckyDropNotification
+          drop={activeDrop.drop}
+          amount={activeDrop.scaledAmount}
+          onComplete={handleDropNotificationComplete}
+        />
+      )}
+
       <View style={styles.tabs}>
         <TouchableOpacity style={styles.tab}>
           <Text style={styles.tabTextActive}>Buildings</Text>
@@ -404,6 +513,17 @@ export const GameScreen: React.FC = () => {
             streak={pendingReward.newStreak}
             isStreakBroken={pendingReward.isStreakBroken}
             onClaim={handleClaimDailyReward}
+          />
+        )}
+      </Modal>
+
+      <Modal visible={showOfflineEarnings} animationType="fade" transparent>
+        {offlineData && (
+          <OfflineEarningsModal
+            offlineTime={offlineData.offlineTime}
+            earnings={offlineData.earnings}
+            productionRate={offlineData.productionRate}
+            onCollect={handleCollectOfflineEarnings}
           />
         )}
       </Modal>
