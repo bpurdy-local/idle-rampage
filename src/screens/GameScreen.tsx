@@ -10,7 +10,22 @@ import {
 } from 'react-native';
 import {useGameStore} from '../stores/gameStore';
 import {useGameLoop} from '../hooks/useGameLoop';
-import {ResourceDisplay, EnemyDisplay, BuildingCard, PrestigePanel, DailyRewardModal, OfflineEarningsModal, LuckyDropNotification, DamagePopupManager} from '../components/game';
+import {
+  ResourceDisplay,
+  EnemyDisplay,
+  BuildingCard,
+  PrestigePanel,
+  PrestigeTabGlow,
+  DailyRewardModal,
+  OfflineEarningsModal,
+  LuckyDropNotification,
+  TapRipple,
+  TapRippleData,
+  WaveVictoryFlash,
+  ResourcePopup,
+  ResourcePopupData,
+  DamagePopupManager,
+} from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
 import {luckyDropSystem, DropResult} from '../systems/LuckyDropSystem';
 import {BoostState} from '../core/GameState';
@@ -37,11 +52,34 @@ export const GameScreen: React.FC = () => {
     productionRate: number;
   } | null>(null);
   const [activeDrop, setActiveDrop] = useState<DropResult | null>(null);
+  const [tapRipples, setTapRipples] = useState<TapRippleData[]>([]);
+  const [showVictoryFlash, setShowVictoryFlash] = useState(false);
+  const [resourcePopups, setResourcePopups] = useState<ResourcePopupData[]>([]);
   const lastTapTimeRef = useRef<number>(0);
   const enemyAreaRef = useRef<{x: number; y: number}>({x: 200, y: 250});
   const hasCheckedOfflineEarnings = useRef(false);
+  const tapRippleIdRef = useRef(0);
+  const resourcePopupIdRef = useRef(0);
 
   const {popups, spawnPopup, removePopup} = useDamagePopups();
+
+  const spawnTapRipple = useCallback((x: number, y: number) => {
+    const id = `ripple_${tapRippleIdRef.current++}`;
+    setTapRipples(prev => [...prev.slice(-5), {id, x, y}]);
+  }, []);
+
+  const removeTapRipple = useCallback((id: string) => {
+    setTapRipples(prev => prev.filter(r => r.id !== id));
+  }, []);
+
+  const spawnResourcePopup = useCallback((amount: number, type: 'scrap' | 'blueprints', x: number, y: number) => {
+    const id = `resource_${resourcePopupIdRef.current++}`;
+    setResourcePopups(prev => [...prev.slice(-3), {id, amount, type, x, y}]);
+  }, []);
+
+  const removeResourcePopup = useCallback((id: string) => {
+    setResourcePopups(prev => prev.filter(r => r.id !== id));
+  }, []);
 
   // Game systems
   const [productionSystem] = useState(() => new ProductionSystem());
@@ -161,6 +199,10 @@ export const GameScreen: React.FC = () => {
           );
           setScrap(player.scrap + reward.totalScrap);
 
+          // Show victory flash and resource popup
+          setShowVictoryFlash(true);
+          spawnResourcePopup(reward.totalScrap, 'scrap', 200, 200);
+
           // Roll for lucky drop
           const dropResult = luckyDropSystem.rollForDrop(currentWave, combat.currentEnemy.reward);
           if (dropResult) {
@@ -200,6 +242,7 @@ export const GameScreen: React.FC = () => {
       setCurrentEnemy,
       setWaveTimer,
       applyDropReward,
+      spawnResourcePopup,
     ],
   );
 
@@ -349,8 +392,13 @@ export const GameScreen: React.FC = () => {
       const x = tapX ?? enemyAreaRef.current.x + (Math.random() - 0.5) * 60;
       const y = tapY ?? enemyAreaRef.current.y + (Math.random() - 0.5) * 40;
       spawnPopup(finalDamage, burst.triggered, x, y);
+
+      // Spawn tap ripple effect
+      if (tapX && tapY) {
+        spawnTapRipple(tapX, tapY);
+      }
     },
-    [combat, combatSystem, prestigeBonuses, damageEnemy, spawnPopup],
+    [combat, combatSystem, prestigeBonuses, damageEnemy, spawnPopup, spawnTapRipple],
   );
 
   // Handle builder assignment (directly through store since it has validation)
@@ -431,6 +479,19 @@ export const GameScreen: React.FC = () => {
 
       <DamagePopupManager popups={popups} onPopupComplete={removePopup} />
 
+      {tapRipples.map(ripple => (
+        <TapRipple key={ripple.id} data={ripple} onComplete={removeTapRipple} />
+      ))}
+
+      {resourcePopups.map(popup => (
+        <ResourcePopup key={popup.id} data={popup} onComplete={removeResourcePopup} />
+      ))}
+
+      <WaveVictoryFlash
+        visible={showVictoryFlash}
+        onComplete={() => setShowVictoryFlash(false)}
+      />
+
       {activeDrop && (
         <LuckyDropNotification
           drop={activeDrop.drop}
@@ -443,9 +504,10 @@ export const GameScreen: React.FC = () => {
         <TouchableOpacity style={styles.tab}>
           <Text style={styles.tabTextActive}>Buildings</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tab} onPress={() => setShowPrestige(true)}>
-          <Text style={styles.tabText}>Prestige</Text>
-        </TouchableOpacity>
+        <PrestigeTabGlow
+          canPrestige={prestigePreview.canPrestige}
+          onPress={() => setShowPrestige(true)}
+        />
       </View>
 
       <ScrollView style={styles.buildingList}>

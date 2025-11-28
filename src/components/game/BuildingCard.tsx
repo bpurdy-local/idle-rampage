@@ -1,5 +1,13 @@
-import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {View, Text, StyleSheet, Pressable} from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import {BuildingState} from '../../core/GameState';
 import {BuildingType} from '../../models/Building';
 import {ProgressBar} from '../common/ProgressBar';
@@ -17,6 +25,8 @@ interface BuildingCardProps {
   availableBuilders: number;
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export const BuildingCard: React.FC<BuildingCardProps> = ({
   building,
   buildingType,
@@ -30,6 +40,27 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
 }) => {
   const canAssign = availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   const canUnassign = building.assignedBuilders > 0;
+
+  const cardOpacity = useSharedValue(0);
+  const cardTranslateX = useSharedValue(-50);
+  const hasAnimated = useRef(false);
+
+  const minusBtnScale = useSharedValue(1);
+  const plusBtnScale = useSharedValue(1);
+  const upgradeBtnScale = useSharedValue(1);
+
+  useEffect(() => {
+    if (!hasAnimated.current) {
+      hasAnimated.current = true;
+      cardOpacity.value = withTiming(1, {duration: 300, easing: Easing.out(Easing.quad)});
+      cardTranslateX.value = withSpring(0, {damping: 15, stiffness: 100});
+    }
+  }, [cardOpacity, cardTranslateX]);
+
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
+    transform: [{translateX: cardTranslateX.value}],
+  }));
 
   const getRoleColor = () => {
     switch (buildingType.role) {
@@ -46,8 +77,44 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
     }
   };
 
+  const createPressHandler = (
+    scale: Animated.SharedValue<number>,
+    action: () => void,
+    enabled: boolean,
+  ) => ({
+    onPressIn: () => {
+      if (enabled) {
+        scale.value = withSpring(0.9, {damping: 15, stiffness: 400});
+      }
+    },
+    onPressOut: () => {
+      scale.value = withSpring(1, {damping: 15, stiffness: 400});
+    },
+    onPress: () => {
+      if (enabled) {
+        scale.value = withSequence(
+          withTiming(0.85, {duration: 50}),
+          withSpring(1, {damping: 10, stiffness: 400}),
+        );
+        action();
+      }
+    },
+  });
+
+  const minusBtnStyle = useAnimatedStyle(() => ({
+    transform: [{scale: minusBtnScale.value}],
+  }));
+
+  const plusBtnStyle = useAnimatedStyle(() => ({
+    transform: [{scale: plusBtnScale.value}],
+  }));
+
+  const upgradeBtnStyle = useAnimatedStyle(() => ({
+    transform: [{scale: upgradeBtnScale.value}],
+  }));
+
   return (
-    <View style={[styles.container, {borderLeftColor: getRoleColor()}]}>
+    <Animated.View style={[styles.container, {borderLeftColor: getRoleColor()}, cardAnimatedStyle]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.name}>{buildingType.name}</Text>
@@ -82,31 +149,28 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
 
       <View style={styles.actions}>
         <View style={styles.builderActions}>
-          <TouchableOpacity
-            style={[styles.builderBtn, !canUnassign && styles.btnDisabled]}
-            onPress={onUnassignBuilder}
-            disabled={!canUnassign}>
+          <AnimatedPressable
+            style={[styles.builderBtn, !canUnassign && styles.btnDisabled, minusBtnStyle]}
+            {...createPressHandler(minusBtnScale, onUnassignBuilder, canUnassign)}>
             <Text style={styles.builderBtnText}>-</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
           <Text style={styles.builderCount}>👷 {building.assignedBuilders}</Text>
-          <TouchableOpacity
-            style={[styles.builderBtn, !canAssign && styles.btnDisabled]}
-            onPress={onAssignBuilder}
-            disabled={!canAssign}>
+          <AnimatedPressable
+            style={[styles.builderBtn, !canAssign && styles.btnDisabled, plusBtnStyle]}
+            {...createPressHandler(plusBtnScale, onAssignBuilder, canAssign)}>
             <Text style={styles.builderBtnText}>+</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
 
-        <TouchableOpacity
-          style={[styles.upgradeBtn, !canAffordUpgrade && styles.btnDisabled]}
-          onPress={onUpgrade}
-          disabled={!canAffordUpgrade}>
+        <AnimatedPressable
+          style={[styles.upgradeBtn, !canAffordUpgrade && styles.btnDisabled, upgradeBtnStyle]}
+          {...createPressHandler(upgradeBtnScale, onUpgrade, canAffordUpgrade)}>
           <Text style={styles.upgradeBtnText}>
             Upgrade ({formatNumber(upgradeCost)})
           </Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
-    </View>
+    </Animated.View>
   );
 };
 

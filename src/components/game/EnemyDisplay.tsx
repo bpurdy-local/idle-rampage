@@ -62,9 +62,9 @@ export const EnemyDisplay: React.FC<EnemyDisplayProps> = ({
       <View style={styles.healthContainer}>
         <ProgressBar
           progress={healthPercent}
-          color={healthPercent > 0.3 ? '#4CAF50' : '#f44336'}
           backgroundColor="#333"
           height={20}
+          useHealthGradient
         />
         <Text style={styles.healthText}>
           {formatNumber(enemy.currentHealth)} / {formatNumber(enemy.maxHealth)}

@@ -1,11 +1,10 @@
 import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import {StyleSheet, Text, ViewStyle, TextStyle, Pressable} from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 
 interface ButtonProps {
   title: string;
@@ -17,6 +16,8 @@ interface ButtonProps {
   textStyle?: TextStyle;
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
@@ -26,6 +27,8 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
 }) => {
+  const scale = useSharedValue(1);
+
   const getBackgroundColor = () => {
     if (disabled) return '#666';
     switch (variant) {
@@ -62,19 +65,35 @@ export const Button: React.FC<ButtonProps> = ({
     }
   };
 
+  const handlePressIn = () => {
+    if (!disabled) {
+      scale.value = withSpring(0.95, {damping: 15, stiffness: 400});
+    }
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, {damping: 15, stiffness: 400});
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{scale: scale.value}],
+  }));
+
   return (
-    <TouchableOpacity
+    <AnimatedPressable
       style={[
         styles.button,
         {backgroundColor: getBackgroundColor()},
         getSizeStyles(),
         style,
+        animatedStyle,
       ]}
       onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.7}>
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      disabled={disabled}>
       <Text style={[styles.text, getTextSize(), textStyle]}>{title}</Text>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 };
 
