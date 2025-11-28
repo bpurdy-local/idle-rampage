@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useRef} from 'react';
 import {StyleSheet, Dimensions} from 'react-native';
 import Animated, {
   useSharedValue,
@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
   Easing,
   runOnJS,
+  cancelAnimation,
 } from 'react-native-reanimated';
 
 interface WaveVictoryFlashProps {
@@ -21,23 +22,24 @@ export const WaveVictoryFlash: React.FC<WaveVictoryFlashProps> = ({
   onComplete,
 }) => {
   const opacity = useSharedValue(0);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     if (visible) {
+      cancelAnimation(opacity);
+      opacity.value = 0;
+
       opacity.value = withSequence(
         withTiming(0.4, {duration: 100, easing: Easing.out(Easing.quad)}),
-        withTiming(
-          0,
-          {duration: 300, easing: Easing.in(Easing.quad)},
-          finished => {
-            if (finished) {
-              runOnJS(onComplete)();
-            }
-          },
-        ),
+        withTiming(0, {duration: 300, easing: Easing.in(Easing.quad)}, () => {
+          runOnJS(onCompleteRef.current)();
+        }),
       );
+    } else {
+      opacity.value = 0;
     }
-  }, [visible, opacity, onComplete]);
+  }, [visible, opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
