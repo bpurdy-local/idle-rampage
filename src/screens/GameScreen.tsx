@@ -7,7 +7,10 @@ import {
   TouchableOpacity,
   Text,
   Modal,
+  Dimensions,
 } from 'react-native';
+
+const {width: SCREEN_WIDTH} = Dimensions.get('window');
 import {useGameStore} from '../stores/gameStore';
 import {useGameLoop} from '../hooks/useGameLoop';
 import {
@@ -105,6 +108,7 @@ export const GameScreen: React.FC = () => {
     setCombatActive,
     setCurrentEnemy,
     setWaveTimer,
+    updateCombatStats,
     dailyRewards,
     updateDailyRewards,
     addScrap,
@@ -201,7 +205,7 @@ export const GameScreen: React.FC = () => {
 
           // Show victory flash and resource popup
           setShowVictoryFlash(true);
-          spawnResourcePopup(reward.totalScrap, 'scrap', 200, 200);
+          spawnResourcePopup(reward.totalScrap, 'scrap', SCREEN_WIDTH / 2 - 50, 180);
 
           // Roll for lucky drop
           const dropResult = luckyDropSystem.rollForDrop(currentWave, combat.currentEnemy.reward);
@@ -223,7 +227,7 @@ export const GameScreen: React.FC = () => {
         const enemy = waveManager.spawnEnemyForWave(currentWave);
         const timer = waveManager.calculateWaveTimer(currentWave);
         setCurrentEnemy(enemy);
-        setWaveTimer(timer);
+        updateCombatStats({waveTimer: timer, waveTimerMax: timer});
         setCombatActive(true);
       }
     },
@@ -241,6 +245,7 @@ export const GameScreen: React.FC = () => {
       setCombatActive,
       setCurrentEnemy,
       setWaveTimer,
+      updateCombatStats,
       applyDropReward,
       spawnResourcePopup,
     ],

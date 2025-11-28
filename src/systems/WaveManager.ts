@@ -46,9 +46,20 @@ export class WaveManager {
     boostMultiplier: number = 1,
   ): WaveReward {
     const baseScrap = enemyReward;
-    const waveBonus = Math.floor(wave * 0.5);
-    const bonusScrap = Math.floor(waveBonus * prestigeRewardBonus * boostMultiplier);
-    const totalScrap = Math.floor((baseScrap + bonusScrap) * prestigeRewardBonus * boostMultiplier);
+
+    // Wave completion bonus: scales more generously with wave number
+    // Base bonus of 5x wave number plus exponential scaling for higher waves
+    const waveBonus = Math.floor(wave * 5 + Math.pow(wave, 1.3));
+
+    // Additional wave completion multiplier (10% per 10 waves, capped at 3x)
+    const waveMultiplier = Math.min(3, 1 + Math.floor(wave / 10) * 0.1);
+
+    const bonusScrap = Math.floor(
+      waveBonus * waveMultiplier * prestigeRewardBonus * boostMultiplier,
+    );
+    const totalScrap = Math.floor(
+      (baseScrap + bonusScrap) * waveMultiplier * prestigeRewardBonus * boostMultiplier,
+    );
 
     return {
       scrap: baseScrap,

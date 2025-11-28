@@ -22,7 +22,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     baseProduction: 3,
     baseCost: 100,
     costMultiplier: 1.6,
-    maxBuilders: 40,
+    maxBuilders: 50,
     unlockWave: 5,
     iconName: 'recycle',
     color: '#228B22',
@@ -35,7 +35,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     baseProduction: 10,
     baseCost: 1000,
     costMultiplier: 1.7,
-    maxBuilders: 30,
+    maxBuilders: 50,
     unlockWave: 15,
     iconName: 'industry',
     color: '#4682B4',
@@ -48,7 +48,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     baseProduction: 0.5,
     baseCost: 50,
     costMultiplier: 1.55,
-    maxBuilders: 30,
+    maxBuilders: 50,
     unlockWave: 3,
     iconName: 'crosshairs',
     color: '#DC143C',
@@ -61,7 +61,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     baseProduction: 0.2,
     baseCost: 500,
     costMultiplier: 1.65,
-    maxBuilders: 20,
+    maxBuilders: 50,
     unlockWave: 10,
     iconName: 'flask',
     color: '#9932CC',
@@ -74,7 +74,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     baseProduction: 0.1,
     baseCost: 5000,
     costMultiplier: 2.0,
-    maxBuilders: 10,
+    maxBuilders: 50,
     unlockWave: 25,
     iconName: 'broadcast-tower',
     color: '#FFD700',
@@ -91,3 +91,8 @@ export const getBuildingsUnlockedAtWave = (wave: number): BuildingType[] => {
 
 // Alias for convenience
 export const BUILDINGS = BUILDING_TYPES;
+
+// Calculate the maximum total builders allowed (sum of all building maxBuilders)
+export const getMaxTotalBuilders = (): number => {
+  return BUILDING_TYPES.reduce((sum, b) => sum + b.maxBuilders, 0);
+};

@@ -1,5 +1,5 @@
-import React, {useEffect, useRef} from 'react';
-import {View, Text, StyleSheet, Pressable} from 'react-native';
+import React, {useEffect, useRef, useCallback} from 'react';
+import {View, Text, StyleSheet, Pressable, GestureResponderEvent} from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -49,6 +49,12 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   const plusBtnScale = useSharedValue(1);
   const upgradeBtnScale = useSharedValue(1);
 
+  // Hold-to-repeat state
+  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const HOLD_DELAY = 300; // ms before repeat starts
+  const HOLD_INTERVAL = 80; // ms between repeats
+
   useEffect(() => {
     if (!hasAnimated.current) {
       hasAnimated.current = true;
@@ -61,6 +67,22 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
     opacity: cardOpacity.value,
     transform: [{translateX: cardTranslateX.value}],
   }));
+
+  const clearHoldTimers = useCallback(() => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => clearHoldTimers();
+  }, [clearHoldTimers]);
 
   const getRoleColor = () => {
     switch (buildingType.role) {
@@ -89,6 +111,37 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
     },
     onPressOut: () => {
       scale.value = withSpring(1, {damping: 15, stiffness: 400});
+    },
+    onPress: () => {
+      if (enabled) {
+        scale.value = withSequence(
+          withTiming(0.85, {duration: 50}),
+          withSpring(1, {damping: 10, stiffness: 400}),
+        );
+        action();
+      }
+    },
+  });
+
+  const createHoldablePressHandler = (
+    scale: Animated.SharedValue<number>,
+    action: () => void,
+    enabled: boolean,
+  ) => ({
+    onPressIn: (_e: GestureResponderEvent) => {
+      if (enabled) {
+        scale.value = withSpring(0.9, {damping: 15, stiffness: 400});
+        // Start hold-to-repeat after delay
+        holdTimeoutRef.current = setTimeout(() => {
+          holdIntervalRef.current = setInterval(() => {
+            action();
+          }, HOLD_INTERVAL);
+        }, HOLD_DELAY);
+      }
+    },
+    onPressOut: () => {
+      scale.value = withSpring(1, {damping: 15, stiffness: 400});
+      clearHoldTimers();
     },
     onPress: () => {
       if (enabled) {
@@ -151,13 +204,13 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
         <View style={styles.builderActions}>
           <AnimatedPressable
             style={[styles.builderBtn, !canUnassign && styles.btnDisabled, minusBtnStyle]}
-            {...createPressHandler(minusBtnScale, onUnassignBuilder, canUnassign)}>
+            {...createHoldablePressHandler(minusBtnScale, onUnassignBuilder, canUnassign)}>
             <Text style={styles.builderBtnText}>-</Text>
           </AnimatedPressable>
           <Text style={styles.builderCount}>👷 {building.assignedBuilders}</Text>
           <AnimatedPressable
             style={[styles.builderBtn, !canAssign && styles.btnDisabled, plusBtnStyle]}
-            {...createPressHandler(plusBtnScale, onAssignBuilder, canAssign)}>
+            {...createHoldablePressHandler(plusBtnScale, onAssignBuilder, canAssign)}>
             <Text style={styles.builderBtnText}>+</Text>
           </AnimatedPressable>
         </View>

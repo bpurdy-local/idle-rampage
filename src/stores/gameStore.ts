@@ -8,6 +8,7 @@ import {
   createInitialGameState,
 } from '../core/GameState';
 import {eventBus, GameEvents} from '../core/EventBus';
+import {getMaxTotalBuilders} from '../data/buildings';
 
 interface GameActions {
   setScrap: (amount: number) => void;
@@ -149,13 +150,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   addBuilders: (count: number) => {
     const player = get().player;
+    const maxBuilders = getMaxTotalBuilders();
+    const actualCount = Math.min(count, maxBuilders - player.builders.total);
+    if (actualCount <= 0) return;
     set({
       player: {
         ...player,
         builders: {
           ...player.builders,
-          total: player.builders.total + count,
-          available: player.builders.available + count,
+          total: player.builders.total + actualCount,
+          available: player.builders.available + actualCount,
         },
       },
     });
