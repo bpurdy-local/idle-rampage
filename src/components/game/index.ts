@@ -3,3 +3,6 @@ export {EnemyDisplay} from './EnemyDisplay';
 export {BuildingCard} from './BuildingCard';
 export {PrestigePanel} from './PrestigePanel';
 export {DailyRewardModal} from './DailyRewardModal';
+export {DamagePopup} from './DamagePopup';
+export {DamagePopupManager} from './DamagePopupManager';
+export type {DamagePopupData} from './DamagePopup';

@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import {useGameStore} from '../stores/gameStore';
 import {useGameLoop} from '../hooks/useGameLoop';
-import {ResourceDisplay, EnemyDisplay, BuildingCard, PrestigePanel, DailyRewardModal} from '../components/game';
+import {ResourceDisplay, EnemyDisplay, BuildingCard, PrestigePanel, DailyRewardModal, DamagePopupManager} from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
+import {useDamagePopups} from '../hooks/useDamagePopups';
 import {BUILDINGS} from '../data/buildings';
 import {BuildingType, calculateUpgradeCost, calculateProduction} from '../models/Building';
 import {ProductionSystem} from '../systems/ProductionSystem';
@@ -25,10 +26,12 @@ const TAP_COOLDOWN_MS = 150;
 
 export const GameScreen: React.FC = () => {
   const [showPrestige, setShowPrestige] = useState(false);
-  const [lastDamage, setLastDamage] = useState<{amount: number; isBurst: boolean} | null>(null);
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [pendingReward, setPendingReward] = useState<DailyRewardCheckResult | null>(null);
   const lastTapTimeRef = useRef<number>(0);
+  const enemyAreaRef = useRef<{x: number; y: number}>({x: 200, y: 250});
+
+  const {popups, spawnPopup, removePopup} = useDamagePopups();
 
   // Game systems
   const [productionSystem] = useState(() => new ProductionSystem());
@@ -207,43 +210,47 @@ export const GameScreen: React.FC = () => {
   }, [pendingReward, dailyRewards, addScrap, addBlueprints, addBuilders, updateDailyRewards]);
 
   // Handle tap attack
-  const handleTap = useCallback(() => {
-    if (!combat.currentEnemy || !combat.isActive) return;
+  const handleTap = useCallback(
+    (tapX?: number, tapY?: number) => {
+      if (!combat.currentEnemy || !combat.isActive) return;
 
-    // Check tap cooldown to prevent auto-clicker abuse
-    const now = Date.now();
-    if (now - lastTapTimeRef.current < TAP_COOLDOWN_MS) {
-      return;
-    }
-    lastTapTimeRef.current = now;
+      // Check tap cooldown to prevent auto-clicker abuse
+      const now = Date.now();
+      if (now - lastTapTimeRef.current < TAP_COOLDOWN_MS) {
+        return;
+      }
+      lastTapTimeRef.current = now;
 
-    const tapDamage = combatSystem.calculateTapDamage(10, {
-      prestigeAutoDamage: prestigeBonuses.autoDamageMultiplier,
-      prestigeTapPower: prestigeBonuses.tapPowerMultiplier,
-      prestigeBurstChance: prestigeBonuses.burstChanceBonus,
-      prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
-      boostMultiplier: 1,
-    });
-
-    const burst = combatSystem.checkBurstAttack(
-      combat.burstChance + prestigeBonuses.burstChanceBonus,
-      combat.burstMultiplier * prestigeBonuses.burstDamageMultiplier,
-      {
-        prestigeAutoDamage: 1,
-        prestigeTapPower: 1,
+      const tapDamage = combatSystem.calculateTapDamage(10, {
+        prestigeAutoDamage: prestigeBonuses.autoDamageMultiplier,
+        prestigeTapPower: prestigeBonuses.tapPowerMultiplier,
         prestigeBurstChance: prestigeBonuses.burstChanceBonus,
         prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
         boostMultiplier: 1,
-      },
-    );
+      });
 
-    const finalDamage = tapDamage * burst.multiplier;
-    damageEnemy(finalDamage);
-    setLastDamage({amount: finalDamage, isBurst: burst.triggered});
+      const burst = combatSystem.checkBurstAttack(
+        combat.burstChance + prestigeBonuses.burstChanceBonus,
+        combat.burstMultiplier * prestigeBonuses.burstDamageMultiplier,
+        {
+          prestigeAutoDamage: 1,
+          prestigeTapPower: 1,
+          prestigeBurstChance: prestigeBonuses.burstChanceBonus,
+          prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
+          boostMultiplier: 1,
+        },
+      );
 
-    // Clear damage popup after delay
-    setTimeout(() => setLastDamage(null), 500);
-  }, [combat, combatSystem, prestigeBonuses, damageEnemy]);
+      const finalDamage = tapDamage * burst.multiplier;
+      damageEnemy(finalDamage);
+
+      // Spawn damage popup at tap location or default enemy area
+      const x = tapX ?? enemyAreaRef.current.x + (Math.random() - 0.5) * 60;
+      const y = tapY ?? enemyAreaRef.current.y + (Math.random() - 0.5) * 40;
+      spawnPopup(finalDamage, burst.triggered, x, y);
+    },
+    [combat, combatSystem, prestigeBonuses, damageEnemy, spawnPopup],
+  );
 
   // Handle builder assignment (directly through store since it has validation)
   const handleAssignBuilder = useCallback(
@@ -321,17 +328,7 @@ export const GameScreen: React.FC = () => {
         onTap={handleTap}
       />
 
-      {lastDamage && (
-        <View style={styles.damagePopup}>
-          <Text
-            style={[
-              styles.damageText,
-              lastDamage.isBurst && styles.burstDamage,
-            ]}>
-            {lastDamage.isBurst ? 'BURST! ' : ''}-{Math.floor(lastDamage.amount)}
-          </Text>
-        </View>
-      )}
+      <DamagePopupManager popups={popups} onPopupComplete={removePopup} />
 
       <View style={styles.tabs}>
         <TouchableOpacity style={styles.tab}>
@@ -418,22 +415,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f0f1a',
-  },
-  damagePopup: {
-    position: 'absolute',
-    top: '40%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  damageText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  burstDamage: {
-    color: '#ff9800',
-    fontSize: 32,
   },
   tabs: {
     flexDirection: 'row',

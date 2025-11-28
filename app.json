@@ -1,0 +1,33 @@
+{
+  "name": "IdleRampage",
+  "displayName": "Idle Rampage",
+  "version": "1.0.0",
+  "description": "A 2D incremental idle/active hybrid game where you manage builders, defeat robot waves, and prestige for permanent upgrades.",
+  "ios": {
+    "bundleIdentifier": "com.idlerampage.app",
+    "buildNumber": "1",
+    "supportsTablet": true,
+    "requiresFullScreen": true
+  },
+  "android": {
+    "package": "com.idlerampage",
+    "versionCode": 1
+  },
+  "store": {
+    "category": "Games",
+    "subcategory": "Casual",
+    "contentRating": "Everyone",
+    "keywords": [
+      "idle",
+      "incremental",
+      "clicker",
+      "robot",
+      "combat",
+      "builder",
+      "prestige",
+      "offline"
+    ],
+    "shortDescription": "Build, battle robots, and prestige in this addictive idle game!",
+    "fullDescription": "Idle Rampage is an exciting incremental game where strategy meets action!\n\nFEATURES:\n- Manage 30+ builders across production and combat buildings\n- Battle through waves of increasingly powerful robots\n- Tap to deal damage or let auto-damage do the work\n- Prestige to earn Blueprints and unlock permanent upgrades\n- Offline progression keeps you earning while away\n- Simple yet deep strategic gameplay\n\nSTRATEGY:\nAssign your builders wisely between Scrap Yards for income and Turret Bays for combat damage. Upgrade buildings to increase efficiency and push to higher waves for better rewards.\n\nPRESTIGE:\nReach wave 10 to unlock prestige. Reset your progress to earn Blueprints - a permanent currency used to purchase powerful upgrades that persist forever.\n\nStart your rampage today!"
+  }
+}
