@@ -41,7 +41,7 @@ export class CombatSystem {
       if (!evolvableBuilding) continue;
       // Only turret_station provides auto damage
       if (building.typeId !== 'turret_station') continue;
-      if (!building.isUnlocked || building.assignedBuilders === 0) continue;
+      if (!building.isUnlocked) continue;
 
       // Get the tier based on the building's current evolution tier
       const tier = evolvableBuilding.tiers[building.evolutionTier - 1];
@@ -49,6 +49,7 @@ export class CombatSystem {
 
       const buildingType = toBuildingType(evolvableBuilding, tier);
 
+      // Buildings provide passive baseline (1 worker equivalent) plus assigned workers
       const baseDamage = calculateProduction(
         buildingType,
         building.level,
@@ -69,7 +70,7 @@ export class CombatSystem {
       if (!evolvableBuilding) continue;
       // Only training_facility provides tap damage bonus
       if (building.typeId !== 'training_facility') continue;
-      if (!building.isUnlocked || building.assignedBuilders === 0) continue;
+      if (!building.isUnlocked) continue;
 
       // Get the tier based on the building's current evolution tier
       const tier = evolvableBuilding.tiers[building.evolutionTier - 1];
@@ -77,7 +78,7 @@ export class CombatSystem {
 
       const buildingType = toBuildingType(evolvableBuilding, tier);
 
-      // Tap damage bonus scales with training facility level and builders
+      // Buildings provide passive baseline (1 worker equivalent) plus assigned workers
       const bonus = calculateProduction(
         buildingType,
         building.level,

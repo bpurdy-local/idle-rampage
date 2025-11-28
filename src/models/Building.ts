@@ -72,18 +72,33 @@ export const calculateUpgradeCost = (
   );
 };
 
+/**
+ * Calculate building production/effect.
+ * All unlocked buildings provide a passive baseline effect (equivalent to 1 worker).
+ * Assigned workers add on top of this baseline.
+ *
+ * @param buildingType - The building type definition
+ * @param level - Current building level
+ * @param assignedBuilders - Number of workers assigned
+ * @param waveBonus - Wave-based bonus multiplier (default 1)
+ * @param prestigeBonus - Prestige bonus multiplier (default 1)
+ * @param includePassive - Whether to include passive baseline (default true)
+ */
 export const calculateProduction = (
   buildingType: BuildingType,
   level: number,
   assignedBuilders: number,
   waveBonus: number = 1,
   prestigeBonus: number = 1,
+  includePassive: boolean = true,
 ): number => {
-  if (assignedBuilders === 0) return 0;
-
   const baseOutput = buildingType.baseProduction;
   const levelMultiplier = 1 + (level - 1) * 0.5;
-  const builderMultiplier = assignedBuilders;
 
-  return baseOutput * levelMultiplier * builderMultiplier * waveBonus * prestigeBonus;
+  // Passive baseline = 1 worker equivalent, plus any assigned workers
+  const effectiveWorkers = includePassive ? 1 + assignedBuilders : assignedBuilders;
+
+  if (effectiveWorkers === 0) return 0;
+
+  return baseOutput * levelMultiplier * effectiveWorkers * waveBonus * prestigeBonus;
 };

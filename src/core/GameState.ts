@@ -133,6 +133,26 @@ export const createInitialGameState = (): GameState => ({
       isUnlocked: false, // unlockWave: 25
       evolutionTier: 1,
     },
+    {
+      id: 'salvage_yard_1',
+      typeId: 'salvage_yard',
+      level: 1,
+      assignedBuilders: 0,
+      productionProgress: 0,
+      upgradeProgress: 0,
+      isUnlocked: false, // unlockWave: 8
+      evolutionTier: 1,
+    },
+    {
+      id: 'engineering_bay_1',
+      typeId: 'engineering_bay',
+      level: 1,
+      assignedBuilders: 0,
+      productionProgress: 0,
+      upgradeProgress: 0,
+      isUnlocked: false, // unlockWave: 12
+      evolutionTier: 1,
+    },
   ],
   combat: {
     isActive: false,

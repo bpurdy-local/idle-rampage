@@ -64,10 +64,11 @@ describe('CombatSystem', () => {
       expect(damage).toBe(0);
     });
 
-    it('returns 0 with no assigned builders', () => {
+    it('returns passive baseline damage with no assigned builders', () => {
+      // With passive baseline, unlocked buildings provide damage even without workers
       const building = createMockTurretBuilding(0);
       const damage = system.calculateAutoDamage([building], defaultBonuses);
-      expect(damage).toBe(0);
+      expect(damage).toBeGreaterThan(0);
     });
 
     it('returns positive damage with turret buildings', () => {

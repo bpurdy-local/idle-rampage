@@ -42,6 +42,8 @@ import {
   getEvolvableBuildingById,
   toBuildingType,
   getNextEvolutionTier,
+  calculateSalvageBonus,
+  calculateEngineeringDiscount,
 } from '../data/buildings';
 import {BuildingEvolutionTier} from '../models/Building';
 import {PRESTIGE_TIERS, PrestigeTier} from '../data/prestigeMilestones';
@@ -220,11 +222,12 @@ export const GameScreen: React.FC = () => {
         );
 
         if (combatResult.enemyDefeated) {
-          // Wave complete
+          // Wave complete - apply salvage yard bonus to rewards
+          const salvageBonus = calculateSalvageBonus(freshBuildings);
           const reward = waveManager.calculateWaveReward(
             freshCurrentWave,
             freshCombat.currentEnemy.reward,
-            freshPrestigeBonuses.waveRewardsMultiplier,
+            freshPrestigeBonuses.waveRewardsMultiplier * salvageBonus,
             1,
           );
           state.setScrap(freshPlayer.scrap + reward.totalScrap);
@@ -472,6 +475,16 @@ export const GameScreen: React.FC = () => {
     [unassignBuilder],
   );
 
+  // Calculate discounted upgrade cost (with Engineering Bay bonus)
+  const getDiscountedUpgradeCost = useCallback(
+    (buildingType: BuildingType, level: number) => {
+      const baseCost = calculateUpgradeCost(buildingType, level);
+      const discount = calculateEngineeringDiscount(buildings);
+      return Math.floor(baseCost * discount);
+    },
+    [buildings],
+  );
+
   // Handle building upgrade
   const handleUpgrade = useCallback(
     (buildingId: string) => {
@@ -485,14 +498,14 @@ export const GameScreen: React.FC = () => {
       if (!tier) return;
 
       const buildingType = toBuildingType(evolvableBuilding, tier);
-      const cost = calculateUpgradeCost(buildingType, building.level);
+      const cost = getDiscountedUpgradeCost(buildingType, building.level);
 
       if (player.scrap >= cost) {
         setScrap(player.scrap - cost);
         upgradeBuilding(buildingId);
       }
     },
-    [buildings, player.scrap, setScrap, upgradeBuilding],
+    [buildings, player.scrap, setScrap, upgradeBuilding, getDiscountedUpgradeCost],
   );
 
   // Handle prestige
@@ -594,7 +607,7 @@ export const GameScreen: React.FC = () => {
               prestigeBonuses.productionMultiplier,
             );
 
-            const upgradeCost = calculateUpgradeCost(buildingType, building.level);
+            const upgradeCost = getDiscountedUpgradeCost(buildingType, building.level);
 
             return (
               <BuildingCard

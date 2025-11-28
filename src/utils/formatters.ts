@@ -2,6 +2,17 @@
  * Format large numbers with suffixes (K, M, B, T, etc.)
  */
 export const formatNumber = (num: number): string => {
+  if (num < 1) {
+    // Show decimals for very small numbers
+    if (num === 0) return '0';
+    return num.toFixed(2);
+  }
+
+  if (num < 10) {
+    // Show one decimal for small numbers
+    return num.toFixed(1);
+  }
+
   if (num < 1000) {
     return Math.floor(num).toString();
   }

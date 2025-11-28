@@ -167,7 +167,61 @@ export class SaveService {
       };
     }
 
+    // Migration: Update buildings array for new building types
+    state = this.migrateBuildingsArray(state);
+
     return state;
+  }
+
+  /**
+   * Ensure buildings array has all required building types and correct structure
+   */
+  private migrateBuildingsArray(state: GameState): GameState {
+    const requiredBuildings = [
+      {id: 'scrap_works_1', typeId: 'scrap_works', unlockWave: 1},
+      {id: 'turret_station_1', typeId: 'turret_station', unlockWave: 3},
+      {id: 'training_facility_1', typeId: 'training_facility', unlockWave: 5},
+      {id: 'salvage_yard_1', typeId: 'salvage_yard', unlockWave: 8},
+      {id: 'engineering_bay_1', typeId: 'engineering_bay', unlockWave: 12},
+      {id: 'command_center_1', typeId: 'command_center', unlockWave: 25},
+    ];
+
+    const existingBuildingIds = new Set(state.buildings.map(b => b.typeId));
+    const updatedBuildings = [...state.buildings];
+
+    // Remove old defense_station if it exists (replaced by turret_station + training_facility)
+    const defenseStationIndex = updatedBuildings.findIndex(b => b.typeId === 'defense_station');
+    if (defenseStationIndex !== -1) {
+      updatedBuildings.splice(defenseStationIndex, 1);
+    }
+
+    // Add any missing buildings
+    for (const required of requiredBuildings) {
+      if (!existingBuildingIds.has(required.typeId)) {
+        updatedBuildings.push({
+          id: required.id,
+          typeId: required.typeId,
+          level: 1,
+          assignedBuilders: 0,
+          productionProgress: 0,
+          upgradeProgress: 0,
+          isUnlocked: state.currentWave >= required.unlockWave,
+          evolutionTier: 1,
+        });
+      }
+    }
+
+    // Ensure all buildings have evolutionTier field
+    for (const building of updatedBuildings) {
+      if (building.evolutionTier === undefined) {
+        building.evolutionTier = 1;
+      }
+    }
+
+    return {
+      ...state,
+      buildings: updatedBuildings,
+    };
   }
 
   /**

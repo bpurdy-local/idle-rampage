@@ -50,10 +50,11 @@ describe('ProductionSystem', () => {
   });
 
   describe('calculateBuildingProduction', () => {
-    it('returns 0 with no builders', () => {
+    it('returns passive baseline with no assigned builders', () => {
+      // With passive baseline, unlocked buildings produce even without workers
       const building = createMockBuilding('scrap_works', 0);
       const production = system.calculateBuildingProduction(building, defaultBonuses);
-      expect(production).toBe(0);
+      expect(production).toBeGreaterThan(0);
     });
 
     it('returns 0 for locked buildings', () => {
@@ -68,14 +69,18 @@ describe('ProductionSystem', () => {
       expect(production).toBeGreaterThan(0);
     });
 
-    it('scales with builder count', () => {
+    it('scales with effective worker count (passive + assigned)', () => {
+      // 0 assigned = 1 effective, 1 assigned = 2 effective, 2 assigned = 3 effective
+      const building0 = createMockBuilding('scrap_works', 0);
       const building1 = createMockBuilding('scrap_works', 1);
       const building2 = createMockBuilding('scrap_works', 2);
 
+      const prod0 = system.calculateBuildingProduction(building0, defaultBonuses);
       const prod1 = system.calculateBuildingProduction(building1, defaultBonuses);
       const prod2 = system.calculateBuildingProduction(building2, defaultBonuses);
 
-      expect(prod2).toBe(prod1 * 2);
+      expect(prod1).toBe(prod0 * 2); // 2 effective vs 1 effective
+      expect(prod2).toBe(prod0 * 3); // 3 effective vs 1 effective
     });
 
     it('applies wave bonus', () => {

@@ -56,20 +56,30 @@ describe('Building Model', () => {
   });
 
   describe('calculateProduction', () => {
-    it('returns 0 with no builders', () => {
+    it('returns passive baseline with no assigned builders (1 effective worker)', () => {
+      // With passive baseline, 0 assigned = 1 effective worker
       const production = calculateProduction(mockBuildingType, 1, 0);
+      expect(production).toBe(10); // baseProduction * 1 effective worker
+    });
+
+    it('returns 0 with no builders when passive is disabled', () => {
+      const production = calculateProduction(mockBuildingType, 1, 0, 1, 1, false);
       expect(production).toBe(0);
     });
 
-    it('returns base production with 1 builder at level 1', () => {
+    it('returns double base production with 1 assigned builder (passive + 1)', () => {
+      // With passive baseline: 1 passive + 1 assigned = 2 effective workers
       const production = calculateProduction(mockBuildingType, 1, 1);
-      expect(production).toBe(10);
+      expect(production).toBe(20); // baseProduction * 2 effective workers
     });
 
-    it('scales linearly with builders', () => {
+    it('scales linearly with total effective workers', () => {
+      // 0 assigned = 1 effective, 1 assigned = 2 effective
+      const prod0 = calculateProduction(mockBuildingType, 1, 0);
       const prod1 = calculateProduction(mockBuildingType, 1, 1);
       const prod2 = calculateProduction(mockBuildingType, 1, 2);
-      expect(prod2).toBe(prod1 * 2);
+      expect(prod1).toBe(prod0 * 2); // 2 effective vs 1 effective
+      expect(prod2).toBe(prod0 * 3); // 3 effective vs 1 effective
     });
 
     it('applies wave bonus', () => {

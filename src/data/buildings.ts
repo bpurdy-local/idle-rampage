@@ -2,8 +2,10 @@ import {
   BuildingType,
   EvolvableBuilding,
   BuildingEvolutionTier,
+  calculateProduction,
 } from '../models/Building';
 import {getTierForPrestigeCount, PrestigeTier} from './prestigeMilestones';
+import {BuildingState} from '../core/GameState';
 
 /**
  * Evolvable buildings - each building can evolve through multiple tiers
@@ -232,6 +234,122 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       },
     ],
   },
+  {
+    id: 'salvage_yard',
+    role: 'utility',
+    costMultiplier: 1.6,
+    maxBuilders: 50,
+    tiers: [
+      {
+        tier: 1,
+        name: 'Salvage Yard',
+        description: 'Bonus scrap from defeated enemies',
+        unlockWave: 8,
+        baseProduction: 0.05, // 5% bonus per effective worker
+        baseCost: 100,
+        iconName: 'recycle',
+        color: '#8B4513',
+      },
+      {
+        tier: 2,
+        name: 'Reclamation Center',
+        description: 'Improved enemy loot recovery',
+        unlockWave: 30,
+        baseProduction: 0.08,
+        baseCost: 800,
+        iconName: 'warehouse',
+        color: '#CD853F',
+      },
+      {
+        tier: 3,
+        name: 'Loot Processor',
+        description: 'Advanced salvage processing',
+        unlockWave: 55,
+        baseProduction: 0.12,
+        baseCost: 8000,
+        iconName: 'cogs',
+        color: '#B8860B',
+      },
+      {
+        tier: 4,
+        name: 'Trophy Hall',
+        description: 'Elite enemy reward extraction',
+        unlockWave: 80,
+        baseProduction: 0.18,
+        baseCost: 80000,
+        iconName: 'gem',
+        color: '#FFD700',
+      },
+      {
+        tier: 5,
+        name: 'Spoils Vault',
+        description: 'Ultimate loot magnification',
+        unlockWave: 98,
+        baseProduction: 0.25,
+        baseCost: 800000,
+        iconName: 'treasure-chest',
+        color: '#FFA500',
+      },
+    ],
+  },
+  {
+    id: 'engineering_bay',
+    role: 'utility',
+    costMultiplier: 1.7,
+    maxBuilders: 50,
+    tiers: [
+      {
+        tier: 1,
+        name: 'Engineering Bay',
+        description: 'Reduces upgrade costs',
+        unlockWave: 12,
+        baseProduction: 0.02, // 2% cost reduction per effective worker
+        baseCost: 150,
+        iconName: 'wrench',
+        color: '#4682B4',
+      },
+      {
+        tier: 2,
+        name: 'Research Lab',
+        description: 'Improved cost efficiency',
+        unlockWave: 35,
+        baseProduction: 0.035,
+        baseCost: 1200,
+        iconName: 'flask',
+        color: '#5F9EA0',
+      },
+      {
+        tier: 3,
+        name: 'Innovation Hub',
+        description: 'Advanced upgrade optimization',
+        unlockWave: 60,
+        baseProduction: 0.05,
+        baseCost: 12000,
+        iconName: 'lightbulb',
+        color: '#00CED1',
+      },
+      {
+        tier: 4,
+        name: 'Tech Nexus',
+        description: 'Superior engineering efficiency',
+        unlockWave: 85,
+        baseProduction: 0.07,
+        baseCost: 120000,
+        iconName: 'microchip',
+        color: '#1E90FF',
+      },
+      {
+        tier: 5,
+        name: 'Singularity Core',
+        description: 'Ultimate cost reduction',
+        unlockWave: 100,
+        baseProduction: 0.10,
+        baseCost: 1200000,
+        iconName: 'atom',
+        color: '#9400D3',
+      },
+    ],
+  },
 ];
 
 /**
@@ -425,4 +543,65 @@ export const getTierColor = (prestigeCount: number): string => {
  */
 export const getCurrentTier = (prestigeCount: number): PrestigeTier => {
   return getTierForPrestigeCount(prestigeCount);
+};
+
+// ============================================================================
+// Building Effect Calculations
+// ============================================================================
+
+/**
+ * Calculate the Salvage Yard reward bonus multiplier.
+ * Returns a multiplier (e.g., 1.15 = 15% bonus to rewards)
+ */
+export const calculateSalvageBonus = (buildings: BuildingState[]): number => {
+  const salvageYard = buildings.find(b => b.typeId === 'salvage_yard');
+  if (!salvageYard || !salvageYard.isUnlocked) return 1;
+
+  const evolvable = getEvolvableBuildingById('salvage_yard');
+  if (!evolvable) return 1;
+
+  const tier = evolvable.tiers[salvageYard.evolutionTier - 1];
+  if (!tier) return 1;
+
+  const buildingType = toBuildingType(evolvable, tier);
+
+  // Calculate bonus percentage (includes passive baseline)
+  const bonusPercent = calculateProduction(
+    buildingType,
+    salvageYard.level,
+    salvageYard.assignedBuilders,
+  );
+
+  // Return as multiplier (e.g., 0.15 bonus -> 1.15 multiplier)
+  return 1 + bonusPercent;
+};
+
+/**
+ * Calculate the Engineering Bay cost reduction multiplier.
+ * Returns a multiplier (e.g., 0.85 = 15% cost reduction)
+ */
+export const calculateEngineeringDiscount = (buildings: BuildingState[]): number => {
+  const engineeringBay = buildings.find(b => b.typeId === 'engineering_bay');
+  if (!engineeringBay || !engineeringBay.isUnlocked) return 1;
+
+  const evolvable = getEvolvableBuildingById('engineering_bay');
+  if (!evolvable) return 1;
+
+  const tier = evolvable.tiers[engineeringBay.evolutionTier - 1];
+  if (!tier) return 1;
+
+  const buildingType = toBuildingType(evolvable, tier);
+
+  // Calculate discount percentage (includes passive baseline)
+  const discountPercent = calculateProduction(
+    buildingType,
+    engineeringBay.level,
+    engineeringBay.assignedBuilders,
+  );
+
+  // Cap discount at 50% to prevent free upgrades
+  const cappedDiscount = Math.min(0.5, discountPercent);
+
+  // Return as multiplier (e.g., 0.15 discount -> 0.85 multiplier)
+  return 1 - cappedDiscount;
 };

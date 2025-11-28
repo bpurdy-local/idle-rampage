@@ -44,7 +44,7 @@ export class ProductionSystem {
 
   calculateCommandCenterBonus(buildings: BuildingState[]): number {
     const commandCenter = buildings.find(b => b.typeId === 'command_center');
-    if (!commandCenter || commandCenter.assignedBuilders === 0 || !commandCenter.isUnlocked) return 1;
+    if (!commandCenter || !commandCenter.isUnlocked) return 1;
 
     const evolvableBuilding = getEvolvableBuildingById('command_center');
     if (!evolvableBuilding) return 1;
@@ -55,6 +55,7 @@ export class ProductionSystem {
 
     const buildingType = toBuildingType(evolvableBuilding, tier);
 
+    // Uses passive baseline (1 worker equivalent) plus assigned workers
     const baseBonus = calculateProduction(
       buildingType,
       commandCenter.level,
@@ -67,7 +68,6 @@ export class ProductionSystem {
     building: BuildingState,
     bonuses: ProductionBonuses,
   ): number {
-    if (building.assignedBuilders === 0) return 0;
     if (!building.isUnlocked) return 0;
 
     const evolvableBuilding = getEvolvableBuildingById(building.typeId);
