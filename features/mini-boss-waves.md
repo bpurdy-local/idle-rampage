@@ -14,15 +14,15 @@ Add mini-boss encounters every 10 waves (waves 10, 20, 30, etc.) that feature st
 
 ## Acceptance Criteria
 
-- [ ] Every 10th wave (10, 20, 30...) spawns a mini-boss instead of a regular enemy
-- [ ] Mini-bosses have 3x the health of regular enemies at that wave
-- [ ] Mini-bosses have 5x the scrap reward of regular enemies
-- [ ] Mini-bosses guarantee a lucky drop on defeat (100% chance)
-- [ ] Mini-bosses have distinct visual treatment (different color, "BOSS" label)
-- [ ] Wave timer is extended by 50% for mini-boss waves
-- [ ] UI clearly indicates when a mini-boss wave is approaching (e.g., "Boss in 2 waves")
-- [ ] Mini-boss defeat triggers a special victory animation/effect
-- [ ] Mini-bosses work correctly with existing prestige and boost multipliers
+- [x] Every 10th wave (10, 20, 30...) spawns a mini-boss instead of a regular enemy
+- [x] Mini-bosses have 3x the health of regular enemies at that wave
+- [x] Mini-bosses have 5x the scrap reward of regular enemies
+- [x] Mini-bosses guarantee a lucky drop on defeat (100% chance)
+- [x] Mini-bosses have distinct visual treatment (different color, "BOSS" label)
+- [x] Wave timer is extended by 50% for mini-boss waves
+- [x] UI clearly indicates when a mini-boss wave is approaching (e.g., "Boss in 2 waves")
+- [x] Mini-boss defeat triggers a special victory animation/effect
+- [x] Mini-bosses work correctly with existing prestige and boost multipliers
 
 ---
 
@@ -174,15 +174,19 @@ On boss defeat, a more dramatic version of WaveVictoryFlash plays - perhaps gold
 
 ## Tasks
 
-1. Add `BOSS_HEALTH_MULTIPLIER` and `BOSS_REWARD_MULTIPLIER` constants to enemies.ts
-2. Create `isBossWave(wave: number)` helper function in WaveManager
-3. Modify `spawnEnemyForWave()` to apply boss multipliers and set `isBoss` flag
-4. Add `isBoss` property to EnemyState interface in GameState.ts
-5. Modify `calculateWaveTimer()` to extend timer for boss waves
-6. Update CombatSystem or wave completion logic to guarantee lucky drop for bosses
-7. Add boss visual treatment to EnemyDisplay component (color, label)
-8. Add "Boss in X waves" indicator to GameScreen
-9. Create boss victory effect (enhanced WaveVictoryFlash)
-10. Write unit tests for boss wave detection and multipliers
-11. Write integration test for guaranteed boss lucky drops
-12. Manual testing on iOS and Android devices
+1. [x] Add `BOSS_HEALTH_MULTIPLIER` and `BOSS_REWARD_MULTIPLIER` constants to enemies.ts
+2. [x] Create `isBossWave(wave: number)` helper function in WaveManager
+3. [x] Modify `spawnEnemyForWave()` to apply boss multipliers and set `isBoss` flag
+4. [x] Add `isBoss` property to EnemyState interface in GameState.ts
+5. [x] Modify `calculateWaveTimer()` to extend timer for boss waves
+6. [x] Update CombatSystem or wave completion logic to guarantee lucky drop for bosses
+7. [x] Add boss visual treatment to EnemyDisplay component (color, label)
+8. [x] Add "Boss in X waves" indicator to GameScreen
+9. [x] Create boss victory effect (enhanced WaveVictoryFlash)
+10. [x] Write unit tests for boss wave detection and multipliers
+11. [ ] Write integration test for guaranteed boss lucky drops
+12. [ ] Manual testing on iOS and Android devices
+
+---
+
+## Implementation Complete: 2025-11-28

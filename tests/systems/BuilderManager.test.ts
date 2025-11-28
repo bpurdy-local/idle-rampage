@@ -3,12 +3,13 @@ import {BuildingState} from '../../src/core/GameState';
 
 const createMockBuilding = (id: string, isUnlocked: boolean = true): BuildingState => ({
   id,
-  typeId: 'scrap_collector',
+  typeId: 'scrap_works',
   level: 1,
   assignedBuilders: 0,
   productionProgress: 0,
   upgradeProgress: 0,
   isUnlocked,
+  evolutionTier: 1,
 });
 
 describe('BuilderManager', () => {

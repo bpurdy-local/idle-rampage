@@ -237,21 +237,25 @@ A modal that appears after prestige when a milestone is reached:
 
 ## Tasks
 
-1. Create `src/data/prestigeMilestones.ts` with milestone thresholds and tier definitions
-2. Extend `src/data/buildings.ts` with tier name variants and colors for all 7 buildings × 9 tiers
-3. Add `buildingTier: number` to PlayerState in GameState.ts
-4. Create `getTierForPrestigeCount(count: number)` helper function
-5. Add `checkPrestigeMilestone()` action to gameStore
-6. Modify `resetForPrestige()` to call milestone check after incrementing prestigeCount
-7. Add `MILESTONE_REACHED` event to EventBus
-8. Modify ProductionSystem to apply tier multiplier to production calculations
-9. Modify CombatSystem to apply tier multiplier to combat calculations
-10. Update BuildingCard to display tier-specific name and color
-11. Update BuildingInfoModal to show tier progression and stats
-12. Create MilestonePopup component for celebration UI
-13. Add milestone popup trigger to GameScreen on prestige
-14. Add "Next milestone" indicator near prestige button
-15. Handle save migration for existing saves (default buildingTier to calculated value)
-16. Write unit tests for milestone thresholds and tier calculations
-17. Write integration tests for prestige milestone flow
-18. Manual testing across all 9 milestones on iOS and Android
+1. [x] Create `src/data/prestigeMilestones.ts` with milestone thresholds and tier definitions
+2. [x] Extend `src/data/buildings.ts` with tier name variants and colors for all 7 buildings × 9 tiers
+3. [x] Add `buildingTier: number` to PlayerState in GameState.ts
+4. [x] Create `getTierForPrestigeCount(count: number)` helper function
+5. [x] Add `checkPrestigeMilestone()` action to gameStore
+6. [x] Modify `resetForPrestige()` to call milestone check after incrementing prestigeCount
+7. [x] Add `MILESTONE_REACHED` event to EventBus
+8. [x] Modify ProductionSystem to apply tier multiplier to production calculations
+9. [x] Modify CombatSystem to apply tier multiplier to combat calculations
+10. [x] Update BuildingCard to display tier-specific name and color
+11. [x] Update BuildingInfoModal to show tier progression and stats
+12. [x] Create MilestonePopup component for celebration UI
+13. [x] Add milestone popup trigger to GameScreen on prestige
+14. [ ] Add "Next milestone" indicator near prestige button
+15. [ ] Handle save migration for existing saves (default buildingTier to calculated value)
+16. [x] Write unit tests for milestone thresholds and tier calculations
+17. [ ] Write integration tests for prestige milestone flow
+18. [ ] Manual testing across all 9 milestones on iOS and Android
+
+---
+
+## Implementation Complete: 2025-11-28

@@ -2,10 +2,11 @@ import {ProductionSystem, ProductionBonuses} from '../../src/systems/ProductionS
 import {BuildingState} from '../../src/core/GameState';
 
 const createMockBuilding = (
-  typeId: string = 'scrap_collector',
+  typeId: string = 'scrap_works',
   assignedBuilders: number = 0,
   level: number = 1,
   isUnlocked: boolean = true,
+  evolutionTier: number = 1,
 ): BuildingState => ({
   id: `building_${typeId}_${Date.now()}`,
   typeId,
@@ -14,6 +15,7 @@ const createMockBuilding = (
   productionProgress: 0,
   upgradeProgress: 0,
   isUnlocked,
+  evolutionTier,
 });
 
 const defaultBonuses: ProductionBonuses = {
@@ -21,6 +23,7 @@ const defaultBonuses: ProductionBonuses = {
   prestigeBonus: 1,
   boostMultiplier: 1,
   commandCenterBonus: 1,
+  tierMultiplier: 1,
 };
 
 describe('ProductionSystem', () => {
@@ -48,26 +51,26 @@ describe('ProductionSystem', () => {
 
   describe('calculateBuildingProduction', () => {
     it('returns 0 with no builders', () => {
-      const building = createMockBuilding('scrap_collector', 0);
+      const building = createMockBuilding('scrap_works', 0);
       const production = system.calculateBuildingProduction(building, defaultBonuses);
       expect(production).toBe(0);
     });
 
     it('returns 0 for locked buildings', () => {
-      const building = createMockBuilding('scrap_collector', 5, 1, false);
+      const building = createMockBuilding('scrap_works', 5, 1, false);
       const production = system.calculateBuildingProduction(building, defaultBonuses);
       expect(production).toBe(0);
     });
 
     it('returns positive value with builders', () => {
-      const building = createMockBuilding('scrap_collector', 1);
+      const building = createMockBuilding('scrap_works', 1);
       const production = system.calculateBuildingProduction(building, defaultBonuses);
       expect(production).toBeGreaterThan(0);
     });
 
     it('scales with builder count', () => {
-      const building1 = createMockBuilding('scrap_collector', 1);
-      const building2 = createMockBuilding('scrap_collector', 2);
+      const building1 = createMockBuilding('scrap_works', 1);
+      const building2 = createMockBuilding('scrap_works', 2);
 
       const prod1 = system.calculateBuildingProduction(building1, defaultBonuses);
       const prod2 = system.calculateBuildingProduction(building2, defaultBonuses);
@@ -76,7 +79,7 @@ describe('ProductionSystem', () => {
     });
 
     it('applies wave bonus', () => {
-      const building = createMockBuilding('scrap_collector', 1);
+      const building = createMockBuilding('scrap_works', 1);
       const bonusWithWave = {...defaultBonuses, waveBonus: 2};
 
       const prodBase = system.calculateBuildingProduction(building, defaultBonuses);
@@ -86,7 +89,7 @@ describe('ProductionSystem', () => {
     });
 
     it('applies prestige bonus', () => {
-      const building = createMockBuilding('scrap_collector', 1);
+      const building = createMockBuilding('scrap_works', 1);
       const bonusWithPrestige = {...defaultBonuses, prestigeBonus: 1.5};
 
       const prodBase = system.calculateBuildingProduction(building, defaultBonuses);
@@ -99,7 +102,7 @@ describe('ProductionSystem', () => {
     });
 
     it('returns 0 for combat buildings', () => {
-      const building = createMockBuilding('turret_bay', 5);
+      const building = createMockBuilding('defense_station', 5);
       const production = system.calculateBuildingProduction(building, defaultBonuses);
       expect(production).toBe(0);
     });
@@ -113,7 +116,7 @@ describe('ProductionSystem', () => {
     });
 
     it('accumulates production over time', () => {
-      const building = createMockBuilding('scrap_collector', 10);
+      const building = createMockBuilding('scrap_works', 10);
       const buildings = [building];
 
       system.tick(buildings, defaultBonuses, 1000);
@@ -131,7 +134,7 @@ describe('ProductionSystem', () => {
     });
 
     it('caps at max offline hours', () => {
-      const building = createMockBuilding('scrap_collector', 10);
+      const building = createMockBuilding('scrap_works', 10);
       const buildings = [building];
 
       const result8h = system.calculateOfflineProduction(
@@ -149,7 +152,7 @@ describe('ProductionSystem', () => {
     });
 
     it('applies offline efficiency reduction', () => {
-      const building = createMockBuilding('scrap_collector', 10);
+      const building = createMockBuilding('scrap_works', 10);
       const buildings = [building];
 
       const productionPerSecond = system.getTotalProductionPerSecond(
@@ -175,32 +178,32 @@ describe('ProductionSystem', () => {
 
     it('starts with first building unlocked', () => {
       const buildings = system.initializeBuildings();
-      const scrapCollector = buildings.find(b => b.typeId === 'scrap_collector');
-      expect(scrapCollector?.isUnlocked).toBe(true);
+      const scrapWorks = buildings.find(b => b.typeId === 'scrap_works');
+      expect(scrapWorks?.isUnlocked).toBe(true);
     });
 
     it('starts with later buildings locked', () => {
       const buildings = system.initializeBuildings();
-      const factory = buildings.find(b => b.typeId === 'factory');
-      expect(factory?.isUnlocked).toBe(false);
+      const commandCenter = buildings.find(b => b.typeId === 'command_center');
+      expect(commandCenter?.isUnlocked).toBe(false);
     });
   });
 
   describe('unlockBuildingsForWave', () => {
     it('unlocks buildings when wave threshold reached', () => {
       const buildings = system.initializeBuildings();
-      const recycler = buildings.find(b => b.typeId === 'recycler');
+      const turretStation = buildings.find(b => b.typeId === 'turret_station');
 
-      expect(recycler?.isUnlocked).toBe(false);
+      expect(turretStation?.isUnlocked).toBe(false);
 
-      system.unlockBuildingsForWave(buildings, 5);
+      system.unlockBuildingsForWave(buildings, 3);
 
-      expect(recycler?.isUnlocked).toBe(true);
+      expect(turretStation?.isUnlocked).toBe(true);
     });
 
     it('returns list of newly unlocked buildings', () => {
       const buildings = system.initializeBuildings();
-      const unlocked = system.unlockBuildingsForWave(buildings, 10);
+      const unlocked = system.unlockBuildingsForWave(buildings, 25);
 
       expect(unlocked.length).toBeGreaterThan(0);
     });

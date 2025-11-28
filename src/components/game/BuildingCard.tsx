@@ -12,6 +12,7 @@ import {BuildingState} from '../../core/GameState';
 import {BuildingType} from '../../models/Building';
 import {ProgressBar} from '../common/ProgressBar';
 import {formatNumber} from '../../utils/formatters';
+import {getTieredBuildingName, getTierColor} from '../../data/buildings';
 
 interface BuildingCardProps {
   building: BuildingState;
@@ -24,6 +25,10 @@ interface BuildingCardProps {
   onUpgrade: () => void;
   onShowInfo: () => void;
   availableBuilders: number;
+  prestigeCount: number;
+  currentWave: number;
+  evolutionTier: number;
+  nextEvolutionWave?: number;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -39,9 +44,22 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   onUpgrade,
   onShowInfo,
   availableBuilders,
+  prestigeCount,
+  currentWave,
+  evolutionTier,
+  nextEvolutionWave,
 }) => {
   const canAssign = availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   const canUnassign = building.assignedBuilders > 0;
+
+  // Get tiered building name and color based on prestige
+  const tieredName = getTieredBuildingName(buildingType.name, prestigeCount);
+  const tierColor = getTierColor(prestigeCount);
+  const hasTier = prestigeCount > 0;
+
+  // Evolution progress info
+  const hasNextEvolution = nextEvolutionWave !== undefined;
+  const wavesUntilEvolution = hasNextEvolution ? nextEvolutionWave - currentWave : 0;
 
   // Refs to track latest enabled states for hold-to-repeat
   const canAssignRef = useRef(canAssign);
@@ -104,38 +122,12 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
         return '#4CAF50';
       case 'combat':
         return '#f44336';
-      case 'research':
-        return '#9c27b0';
       case 'utility':
         return '#2196F3';
       default:
         return '#888';
     }
   };
-
-  const createPressHandler = (
-    scale: Animated.SharedValue<number>,
-    action: () => void,
-    enabled: boolean,
-  ) => ({
-    onPressIn: () => {
-      if (enabled) {
-        scale.value = withSpring(0.9, {damping: 15, stiffness: 400});
-      }
-    },
-    onPressOut: () => {
-      scale.value = withSpring(1, {damping: 15, stiffness: 400});
-    },
-    onPress: () => {
-      if (enabled) {
-        scale.value = withSequence(
-          withTiming(0.85, {duration: 50}),
-          withSpring(1, {damping: 10, stiffness: 400}),
-        );
-        action();
-      }
-    },
-  });
 
   const createHoldablePressHandler = (
     scale: Animated.SharedValue<number>,
@@ -186,11 +178,16 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   }));
 
   return (
-    <Animated.View style={[styles.container, {borderLeftColor: getRoleColor()}, cardAnimatedStyle]}>
+    <Animated.View style={[styles.container, {borderLeftColor: getRoleColor()}, hasTier && {borderColor: tierColor}, cardAnimatedStyle]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={styles.titleLeft}>
-            <Text style={styles.name}>{buildingType.name}</Text>
+            <Text style={[styles.name, hasTier && {color: tierColor}]}>{tieredName}</Text>
+            {evolutionTier > 1 && (
+              <View style={[styles.evolutionBadge, {backgroundColor: buildingType.color}]}>
+                <Text style={styles.evolutionBadgeText}>T{evolutionTier}</Text>
+              </View>
+            )}
             <TouchableOpacity style={styles.infoBtn} onPress={onShowInfo}>
               <Text style={styles.infoBtnText}>?</Text>
             </TouchableOpacity>
@@ -198,6 +195,11 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
           <Text style={styles.level}>Lv.{building.level}</Text>
         </View>
         <Text style={styles.description}>{buildingType.description}</Text>
+        {hasNextEvolution && wavesUntilEvolution > 0 && (
+          <Text style={styles.evolutionHint}>
+            Evolves in {wavesUntilEvolution} wave{wavesUntilEvolution !== 1 ? 's' : ''}
+          </Text>
+        )}
       </View>
 
       <View style={styles.stats}>
@@ -292,6 +294,23 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 12,
     fontWeight: '700',
+  },
+  evolutionBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 4,
+  },
+  evolutionBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  evolutionHint: {
+    color: '#ffd700',
+    fontSize: 10,
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   level: {
     color: '#ff9800',

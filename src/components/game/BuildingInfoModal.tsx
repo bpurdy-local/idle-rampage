@@ -8,11 +8,18 @@ import {
   ScrollView,
 } from 'react-native';
 import {BuildingType} from '../../models/Building';
+import {getTieredBuildingName, getTierColor} from '../../data/buildings';
+import {
+  PRESTIGE_TIERS,
+  getNextMilestone,
+  getPrestigesUntilNextMilestone,
+} from '../../data/prestigeMilestones';
 
 interface BuildingInfoModalProps {
   visible: boolean;
   building: BuildingType | null;
   onClose: () => void;
+  prestigeCount: number;
 }
 
 const getRoleColor = (role: string): string => {
@@ -83,10 +90,16 @@ export const BuildingInfoModal: React.FC<BuildingInfoModalProps> = ({
   visible,
   building,
   onClose,
+  prestigeCount,
 }) => {
   if (!building) return null;
 
   const roleColor = getRoleColor(building.role);
+  const tieredName = getTieredBuildingName(building.name, prestigeCount);
+  const tierColor = getTierColor(prestigeCount);
+  const currentTier = PRESTIGE_TIERS.find(t => t.prestigeRequired <= prestigeCount && (PRESTIGE_TIERS[t.tier + 1]?.prestigeRequired ?? Infinity) > prestigeCount) ?? PRESTIGE_TIERS[0];
+  const nextMilestone = getNextMilestone(prestigeCount);
+  const prestigesUntilNext = getPrestigesUntilNextMilestone(prestigeCount);
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -101,8 +114,25 @@ export const BuildingInfoModal: React.FC<BuildingInfoModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.title}>{building.name}</Text>
+          <Text style={[styles.title, prestigeCount > 0 && {color: tierColor}]}>{tieredName}</Text>
           <Text style={styles.description}>{building.description}</Text>
+
+          {/* Tier Progression Section */}
+          <View style={styles.tierSection}>
+            <View style={styles.tierHeader}>
+              <Text style={styles.tierLabel}>Building Tier</Text>
+              <Text style={[styles.tierValue, {color: tierColor}]}>
+                {currentTier.name} ({currentTier.multiplier}x)
+              </Text>
+            </View>
+            {nextMilestone && (
+              <View style={styles.tierProgress}>
+                <Text style={styles.tierProgressText}>
+                  Next: {nextMilestone.name} ({nextMilestone.multiplier}x) in {prestigesUntilNext} prestige{prestigesUntilNext !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            )}
+          </View>
 
           <ScrollView style={styles.detailsScroll}>
             <View style={styles.detailsSection}>
@@ -220,7 +250,36 @@ const styles = StyleSheet.create({
   description: {
     color: '#888',
     fontSize: 14,
+    marginBottom: 12,
+  },
+  tierSection: {
+    backgroundColor: '#0f0f1a',
+    borderRadius: 8,
+    padding: 12,
     marginBottom: 16,
+  },
+  tierHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tierLabel: {
+    color: '#888',
+    fontSize: 12,
+  },
+  tierValue: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  tierProgress: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  tierProgressText: {
+    color: '#aaa',
+    fontSize: 11,
   },
   detailsScroll: {
     maxHeight: 300,

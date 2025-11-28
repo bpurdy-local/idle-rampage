@@ -6,6 +6,7 @@ const createMockPlayer = (overrides: Partial<PlayerState> = {}): PlayerState => 
   blueprints: 50,
   totalBlueprintsEarned: 100,
   prestigeCount: 1,
+  buildingTier: 0,
   highestWave: 25,
   totalTaps: 500,
   totalEnemiesDefeated: 100,

@@ -20,14 +20,16 @@ export class LuckyDropSystem {
     this.totalWeight = LUCKY_DROPS.reduce((sum, drop) => sum + drop.weight, 0);
   }
 
-  rollForDrop(wave: number, baseWaveReward: number): DropResult | null {
+  rollForDrop(wave: number, baseWaveReward: number, guaranteedDrop: boolean = false): DropResult | null {
     if (wave < DROP_CONFIG.minWaveForDrops) {
       return null;
     }
 
-    const roll = Math.random();
-    if (roll > DROP_CONFIG.baseDropChance) {
-      return null;
+    if (!guaranteedDrop) {
+      const roll = Math.random();
+      if (roll > DROP_CONFIG.baseDropChance) {
+        return null;
+      }
     }
 
     const drop = this.selectDrop();

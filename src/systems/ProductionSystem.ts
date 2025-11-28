@@ -1,5 +1,9 @@
 import {BuildingState} from '../core/GameState';
-import {getBuildingTypeById, BUILDING_TYPES} from '../data/buildings';
+import {
+  getEvolvableBuildingById,
+  toBuildingType,
+  EVOLVABLE_BUILDINGS,
+} from '../data/buildings';
 import {calculateProduction} from '../models/Building';
 import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {getUpgradeEffect} from '../models/PrestigeUpgrade';
@@ -20,6 +24,7 @@ export interface ProductionBonuses {
   prestigeBonus: number;
   boostMultiplier: number;
   commandCenterBonus: number;
+  tierMultiplier: number;
 }
 
 export class ProductionSystem {
@@ -39,10 +44,16 @@ export class ProductionSystem {
 
   calculateCommandCenterBonus(buildings: BuildingState[]): number {
     const commandCenter = buildings.find(b => b.typeId === 'command_center');
-    if (!commandCenter || commandCenter.assignedBuilders === 0) return 1;
+    if (!commandCenter || commandCenter.assignedBuilders === 0 || !commandCenter.isUnlocked) return 1;
 
-    const buildingType = getBuildingTypeById('command_center');
-    if (!buildingType) return 1;
+    const evolvableBuilding = getEvolvableBuildingById('command_center');
+    if (!evolvableBuilding) return 1;
+
+    // Get the tier based on the building's current evolution tier
+    const tier = evolvableBuilding.tiers[commandCenter.evolutionTier - 1];
+    if (!tier) return 1;
+
+    const buildingType = toBuildingType(evolvableBuilding, tier);
 
     const baseBonus = calculateProduction(
       buildingType,
@@ -56,13 +67,18 @@ export class ProductionSystem {
     building: BuildingState,
     bonuses: ProductionBonuses,
   ): number {
-    const buildingType = getBuildingTypeById(building.typeId);
-    if (!buildingType) return 0;
-
     if (building.assignedBuilders === 0) return 0;
     if (!building.isUnlocked) return 0;
 
-    if (buildingType.role !== 'production') return 0;
+    const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+    if (!evolvableBuilding) return 0;
+    if (evolvableBuilding.role !== 'production') return 0;
+
+    // Get the tier based on the building's current evolution tier
+    const tier = evolvableBuilding.tiers[building.evolutionTier - 1];
+    if (!tier) return 0;
+
+    const buildingType = toBuildingType(evolvableBuilding, tier);
 
     const baseProduction = calculateProduction(
       buildingType,
@@ -72,7 +88,7 @@ export class ProductionSystem {
       bonuses.prestigeBonus,
     );
 
-    return baseProduction * bonuses.boostMultiplier * bonuses.commandCenterBonus;
+    return baseProduction * bonuses.boostMultiplier * bonuses.commandCenterBonus * bonuses.tierMultiplier;
   }
 
   tick(
@@ -158,14 +174,15 @@ export class ProductionSystem {
   }
 
   initializeBuildings(): BuildingState[] {
-    return BUILDING_TYPES.map((type, index) => ({
-      id: `building_${type.id}_${index}`,
-      typeId: type.id,
+    return EVOLVABLE_BUILDINGS.map((evolvable, index) => ({
+      id: `building_${evolvable.id}_${index}`,
+      typeId: evolvable.id,
       level: 1,
       assignedBuilders: 0,
       productionProgress: 0,
       upgradeProgress: 0,
-      isUnlocked: type.unlockWave === 1,
+      isUnlocked: evolvable.tiers[0].unlockWave === 1,
+      evolutionTier: 1,
     }));
   }
 
@@ -175,8 +192,8 @@ export class ProductionSystem {
     for (const building of buildings) {
       if (building.isUnlocked) continue;
 
-      const buildingType = getBuildingTypeById(building.typeId);
-      if (buildingType && buildingType.unlockWave <= currentWave) {
+      const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+      if (evolvableBuilding && evolvableBuilding.tiers[0].unlockWave <= currentWave) {
         building.isUnlocked = true;
         newlyUnlocked.push(building.id);
       }

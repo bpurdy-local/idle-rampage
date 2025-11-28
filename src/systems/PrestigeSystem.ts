@@ -280,6 +280,7 @@ export class PrestigeSystem {
       blueprints: newTotalBlueprints,
       totalBlueprintsEarned: previousPlayer.totalBlueprintsEarned + blueprintsEarned,
       prestigeCount: previousPlayer.prestigeCount + 1,
+      buildingTier: 0,
       highestWave: Math.max(previousPlayer.highestWave, 0),
       totalTaps: 0,
       totalEnemiesDefeated: 0,

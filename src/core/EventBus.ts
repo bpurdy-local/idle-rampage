@@ -47,6 +47,7 @@ export const GameEvents = {
   ENEMY_DEFEATED: 'enemy_defeated',
   RESOURCE_GAINED: 'resource_gained',
   BUILDING_UPGRADED: 'building_upgraded',
+  BUILDING_EVOLVED: 'building_evolved',
   BUILDER_ASSIGNED: 'builder_assigned',
   PRESTIGE_TRIGGERED: 'prestige_triggered',
   TAP_REGISTERED: 'tap_registered',
@@ -56,6 +57,7 @@ export const GameEvents = {
   APP_BACKGROUNDED: 'app_backgrounded',
   APP_FOREGROUNDED: 'app_foregrounded',
   LUCKY_DROP: 'lucky_drop',
+  MILESTONE_REACHED: 'milestone_reached',
 } as const;
 
 export type GameEventType = typeof GameEvents[keyof typeof GameEvents];

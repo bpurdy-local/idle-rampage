@@ -10,14 +10,26 @@ const createMockEnemy = (health: number = 100): EnemyState => ({
   reward: 10,
 });
 
-const createMockCombatBuilding = (assignedBuilders: number = 5): BuildingState => ({
-  id: 'turret_1',
-  typeId: 'turret_bay',
+const createMockTurretBuilding = (assignedBuilders: number = 5): BuildingState => ({
+  id: 'turret_station_1',
+  typeId: 'turret_station',
   level: 1,
   assignedBuilders,
   productionProgress: 0,
   upgradeProgress: 0,
   isUnlocked: true,
+  evolutionTier: 1,
+});
+
+const createMockTrainingBuilding = (assignedBuilders: number = 5): BuildingState => ({
+  id: 'training_facility_1',
+  typeId: 'training_facility',
+  level: 1,
+  assignedBuilders,
+  productionProgress: 0,
+  upgradeProgress: 0,
+  isUnlocked: true,
+  evolutionTier: 1,
 });
 
 const createMockCombatState = (): CombatState => ({
@@ -36,6 +48,7 @@ const defaultBonuses: CombatBonuses = {
   prestigeBurstChance: 0,
   prestigeBurstDamage: 1,
   boostMultiplier: 1,
+  tierMultiplier: 1,
 };
 
 describe('CombatSystem', () => {
@@ -52,19 +65,25 @@ describe('CombatSystem', () => {
     });
 
     it('returns 0 with no assigned builders', () => {
-      const building = createMockCombatBuilding(0);
+      const building = createMockTurretBuilding(0);
       const damage = system.calculateAutoDamage([building], defaultBonuses);
       expect(damage).toBe(0);
     });
 
-    it('returns positive damage with combat buildings', () => {
-      const building = createMockCombatBuilding(5);
+    it('returns positive damage with turret buildings', () => {
+      const building = createMockTurretBuilding(5);
       const damage = system.calculateAutoDamage([building], defaultBonuses);
       expect(damage).toBeGreaterThan(0);
     });
 
+    it('returns 0 for training facility (only turret provides auto damage)', () => {
+      const building = createMockTrainingBuilding(5);
+      const damage = system.calculateAutoDamage([building], defaultBonuses);
+      expect(damage).toBe(0);
+    });
+
     it('scales with prestige bonus', () => {
-      const building = createMockCombatBuilding(5);
+      const building = createMockTurretBuilding(5);
       const bonusWithPrestige = {...defaultBonuses, prestigeAutoDamage: 2};
 
       const damageBase = system.calculateAutoDamage([building], defaultBonuses);
@@ -179,28 +198,29 @@ describe('CombatSystem', () => {
       expect(result.totalDamage).toBe(0);
     });
 
-    it('decreases wave timer', () => {
+    it('does not modify wave timer (timer is updated externally)', () => {
       const enemy = createMockEnemy();
       const combat = createMockCombatState();
       combat.waveTimer = 30;
 
       system.tick(enemy, [], combat, defaultBonuses, 1000);
-      expect(combat.waveTimer).toBe(29);
+      // CombatSystem tick does NOT modify waveTimer - it's done externally via store
+      expect(combat.waveTimer).toBe(30);
     });
 
-    it('triggers timer expired when timer reaches 0', () => {
+    it('triggers timer expired when timer is at 0', () => {
       const enemy = createMockEnemy();
       const combat = createMockCombatState();
-      combat.waveTimer = 0.5;
+      combat.waveTimer = 0; // Timer already at 0
 
       const result = system.tick(enemy, [], combat, defaultBonuses, 1000);
       expect(result.timerExpired).toBe(true);
     });
 
-    it('deals damage with combat buildings', () => {
+    it('deals damage with turret buildings', () => {
       const enemy = createMockEnemy(1000);
       const combat = createMockCombatState();
-      const buildings = [createMockCombatBuilding(10)];
+      const buildings = [createMockTurretBuilding(10)];
 
       const result = system.tick(enemy, buildings, combat, defaultBonuses, 1000);
       expect(result.autoDamage).toBeGreaterThan(0);
@@ -209,7 +229,7 @@ describe('CombatSystem', () => {
     it('defeats enemy when health depleted', () => {
       const enemy = createMockEnemy(1);
       const combat = createMockCombatState();
-      const buildings = [createMockCombatBuilding(10)];
+      const buildings = [createMockTurretBuilding(10)];
 
       const result = system.tick(enemy, buildings, combat, defaultBonuses, 10000);
       expect(result.enemyDefeated).toBe(true);

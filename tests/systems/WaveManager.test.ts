@@ -59,9 +59,14 @@ describe('WaveManager', () => {
       expect(timer50).toBeGreaterThan(timer1);
     });
 
-    it('caps at max timer', () => {
-      const timer = manager.calculateWaveTimer(1000);
+    it('caps at max timer for non-boss waves', () => {
+      const timer = manager.calculateWaveTimer(999); // Non-boss wave
       expect(timer).toBeLessThanOrEqual(60);
+    });
+
+    it('allows boss waves to exceed normal max (with 1.5x multiplier)', () => {
+      const timer = manager.calculateWaveTimer(1000); // Boss wave
+      expect(timer).toBeLessThanOrEqual(90); // 60 * 1.5
     });
   });
 
@@ -169,6 +174,101 @@ describe('WaveManager', () => {
     it('returns true with sufficient damage', () => {
       const canDefeat = manager.canDefeatWaveInTime(1, 1000);
       expect(canDefeat).toBe(true);
+    });
+  });
+
+  describe('isBossWave', () => {
+    it('returns true for wave 10', () => {
+      expect(manager.isBossWave(10)).toBe(true);
+    });
+
+    it('returns true for wave 20', () => {
+      expect(manager.isBossWave(20)).toBe(true);
+    });
+
+    it('returns true for wave 100', () => {
+      expect(manager.isBossWave(100)).toBe(true);
+    });
+
+    it('returns false for wave 1', () => {
+      expect(manager.isBossWave(1)).toBe(false);
+    });
+
+    it('returns false for wave 5', () => {
+      expect(manager.isBossWave(5)).toBe(false);
+    });
+
+    it('returns false for wave 15', () => {
+      expect(manager.isBossWave(15)).toBe(false);
+    });
+
+    it('returns false for wave 25', () => {
+      expect(manager.isBossWave(25)).toBe(false);
+    });
+
+    it('returns false for wave 0', () => {
+      expect(manager.isBossWave(0)).toBe(false);
+    });
+  });
+
+  describe('getWavesUntilBoss', () => {
+    it('returns 10 for wave 0', () => {
+      expect(manager.getWavesUntilBoss(0)).toBe(10);
+    });
+
+    it('returns 9 for wave 1', () => {
+      expect(manager.getWavesUntilBoss(1)).toBe(9);
+    });
+
+    it('returns 1 for wave 9', () => {
+      expect(manager.getWavesUntilBoss(9)).toBe(1);
+    });
+
+    it('returns 10 for wave 10 (next boss is 20)', () => {
+      expect(manager.getWavesUntilBoss(10)).toBe(10);
+    });
+  });
+
+  describe('boss enemy spawning', () => {
+    it('spawns boss with isBoss flag on wave 10', () => {
+      const enemy = manager.spawnEnemyForWave(10);
+      expect(enemy.isBoss).toBe(true);
+    });
+
+    it('spawns boss with 3x health', () => {
+      const regularEnemy = manager.spawnEnemyForWave(9);
+      const bossEnemy = manager.spawnEnemyForWave(10);
+      expect(bossEnemy.maxHealth).toBeGreaterThan(regularEnemy.maxHealth * 2.5);
+    });
+
+    it('spawns boss with 5x reward', () => {
+      const regularEnemy = manager.spawnEnemyForWave(9);
+      const bossEnemy = manager.spawnEnemyForWave(10);
+      expect(bossEnemy.reward).toBeGreaterThan(regularEnemy.reward * 4);
+    });
+
+    it('spawns boss with Alpha in name', () => {
+      const enemy = manager.spawnEnemyForWave(10);
+      expect(enemy.name).toContain('Alpha');
+    });
+
+    it('does not set isBoss flag for regular enemies', () => {
+      const enemy = manager.spawnEnemyForWave(5);
+      expect(enemy.isBoss).toBeFalsy();
+    });
+  });
+
+  describe('boss wave timer', () => {
+    it('extends timer by 1.5x for boss waves', () => {
+      const regularTimer = manager.calculateWaveTimer(9);
+      const bossTimer = manager.calculateWaveTimer(10);
+      expect(bossTimer).toBeGreaterThan(regularTimer * 1.4);
+    });
+
+    it('does not extend timer for regular waves', () => {
+      const timer5 = manager.calculateWaveTimer(5);
+      const timer6 = manager.calculateWaveTimer(6);
+      expect(timer6 - timer5).toBeLessThan(1);
     });
   });
 });

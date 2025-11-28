@@ -71,3 +71,10 @@ export const getEnemyTierForWave = (wave: number): EnemyTier => {
 export const getEnemyTierById = (id: string): EnemyTier | undefined => {
   return ENEMY_TIERS.find(t => t.id === id);
 };
+
+export const BOSS_CONFIG = {
+  healthMultiplier: 3.0,
+  rewardMultiplier: 5.0,
+  timerMultiplier: 1.5,
+  waveInterval: 10,
+};

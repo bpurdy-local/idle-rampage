@@ -1,5 +1,5 @@
 import {CombatState, EnemyState} from '../core/GameState';
-import {getEnemyTierForWave} from '../data/enemies';
+import {getEnemyTierForWave, BOSS_CONFIG} from '../data/enemies';
 import {createEnemy, Enemy} from '../models/Enemy';
 import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {getUpgradeEffect} from '../models/PrestigeUpgrade';
@@ -29,14 +29,41 @@ export class WaveManager {
     };
   }
 
+  isBossWave(wave: number): boolean {
+    return wave > 0 && wave % BOSS_CONFIG.waveInterval === 0;
+  }
+
+  getWavesUntilBoss(wave: number): number {
+    return BOSS_CONFIG.waveInterval - (wave % BOSS_CONFIG.waveInterval);
+  }
+
   spawnEnemyForWave(wave: number): Enemy {
     const tier = getEnemyTierForWave(wave);
-    return createEnemy(tier, wave);
+    const baseEnemy = createEnemy(tier, wave);
+
+    if (this.isBossWave(wave)) {
+      return {
+        ...baseEnemy,
+        name: `${tier.name} Alpha`,
+        maxHealth: Math.floor(baseEnemy.maxHealth * BOSS_CONFIG.healthMultiplier),
+        currentHealth: Math.floor(baseEnemy.maxHealth * BOSS_CONFIG.healthMultiplier),
+        reward: Math.floor(baseEnemy.reward * BOSS_CONFIG.rewardMultiplier),
+        isBoss: true,
+      };
+    }
+
+    return baseEnemy;
   }
 
   calculateWaveTimer(wave: number): number {
-    const timer = this.config.baseTimerSeconds + wave * this.config.timerBonusPerWave;
-    return Math.min(timer, this.config.maxTimerSeconds);
+    const baseTimer = this.config.baseTimerSeconds + wave * this.config.timerBonusPerWave;
+    const timer = Math.min(baseTimer, this.config.maxTimerSeconds);
+
+    if (this.isBossWave(wave)) {
+      return timer * BOSS_CONFIG.timerMultiplier;
+    }
+
+    return timer;
   }
 
   calculateWaveReward(

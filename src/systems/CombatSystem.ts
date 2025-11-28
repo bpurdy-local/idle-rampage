@@ -1,5 +1,5 @@
 import {BuildingState, CombatState, EnemyState} from '../core/GameState';
-import {getBuildingTypeById} from '../data/buildings';
+import {getEvolvableBuildingById, toBuildingType} from '../data/buildings';
 import {calculateProduction} from '../models/Building';
 import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {getUpgradeEffect} from '../models/PrestigeUpgrade';
@@ -11,6 +11,7 @@ export interface CombatBonuses {
   prestigeBurstChance: number;
   prestigeBurstDamage: number;
   boostMultiplier: number;
+  tierMultiplier: number;
 }
 
 export interface DamageResult {
@@ -36,13 +37,17 @@ export class CombatSystem {
     let totalDamage = 0;
 
     for (const building of buildings) {
-      const buildingType = getBuildingTypeById(building.typeId);
-      if (!buildingType) continue;
-
-      // Skip training ground - it boosts tap damage, not auto damage
-      if (buildingType.id === 'training_ground') continue;
-      if (buildingType.role !== 'combat') continue;
+      const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+      if (!evolvableBuilding) continue;
+      // Only turret_station provides auto damage
+      if (building.typeId !== 'turret_station') continue;
       if (!building.isUnlocked || building.assignedBuilders === 0) continue;
+
+      // Get the tier based on the building's current evolution tier
+      const tier = evolvableBuilding.tiers[building.evolutionTier - 1];
+      if (!tier) continue;
+
+      const buildingType = toBuildingType(evolvableBuilding, tier);
 
       const baseDamage = calculateProduction(
         buildingType,
@@ -52,20 +57,27 @@ export class CombatSystem {
       totalDamage += baseDamage;
     }
 
-    return totalDamage * bonuses.prestigeAutoDamage * bonuses.boostMultiplier;
+    return totalDamage * bonuses.prestigeAutoDamage * bonuses.boostMultiplier * bonuses.tierMultiplier;
   }
 
   calculateTapDamageBonus(buildings: BuildingState[]): number {
     let totalBonus = 0;
 
+    // Only training_facility provides tap damage bonus
     for (const building of buildings) {
-      const buildingType = getBuildingTypeById(building.typeId);
-      if (!buildingType) continue;
-
-      if (buildingType.id !== 'training_ground') continue;
+      const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+      if (!evolvableBuilding) continue;
+      // Only training_facility provides tap damage bonus
+      if (building.typeId !== 'training_facility') continue;
       if (!building.isUnlocked || building.assignedBuilders === 0) continue;
 
-      // Use same formula as other buildings: base * levelMultiplier * builders
+      // Get the tier based on the building's current evolution tier
+      const tier = evolvableBuilding.tiers[building.evolutionTier - 1];
+      if (!tier) continue;
+
+      const buildingType = toBuildingType(evolvableBuilding, tier);
+
+      // Tap damage bonus scales with training facility level and builders
       const bonus = calculateProduction(
         buildingType,
         building.level,
@@ -83,7 +95,7 @@ export class CombatSystem {
   ): number {
     const randomVariance = 0.8 + Math.random() * 0.4;
     return Math.floor(
-      baseTapDamage * bonuses.prestigeTapPower * bonuses.boostMultiplier * randomVariance,
+      baseTapDamage * bonuses.prestigeTapPower * bonuses.boostMultiplier * bonuses.tierMultiplier * randomVariance,
     );
   }
 
@@ -223,6 +235,7 @@ export class CombatSystem {
       prestigeBurstChance: getBonusForType('burst_chance') - 0.05,
       prestigeBurstDamage: getBonusForType('burst_damage') / 5,
       boostMultiplier: 1,
+      tierMultiplier: 1,
     };
   }
 

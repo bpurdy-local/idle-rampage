@@ -6,6 +6,8 @@ export interface BuildingState {
   productionProgress: number;
   upgradeProgress: number;
   isUnlocked: boolean;
+  /** Current evolution tier (1-indexed) */
+  evolutionTier: number;
 }
 
 export interface EnemyState {
@@ -16,6 +18,7 @@ export interface EnemyState {
   maxHealth: number;
   reward: number;
   wave?: number;
+  isBoss?: boolean;
 }
 
 export interface CombatState {
@@ -39,6 +42,7 @@ export interface PlayerState {
   blueprints: number;
   totalBlueprintsEarned: number;
   prestigeCount: number;
+  buildingTier: number;
   highestWave: number;
   totalTaps: number;
   totalEnemiesDefeated: number;
@@ -75,6 +79,7 @@ export const createInitialGameState = (): GameState => ({
     blueprints: 0,
     totalBlueprintsEarned: 0,
     prestigeCount: 0,
+    buildingTier: 0,
     highestWave: 0,
     totalTaps: 0,
     totalEnemiesDefeated: 0,
@@ -89,58 +94,34 @@ export const createInitialGameState = (): GameState => ({
   },
   buildings: [
     {
-      id: 'scrap_collector_1',
-      typeId: 'scrap_collector',
+      id: 'scrap_works_1',
+      typeId: 'scrap_works',
       level: 1,
       assignedBuilders: 0,
       productionProgress: 0,
       upgradeProgress: 0,
       isUnlocked: true, // unlockWave: 1
+      evolutionTier: 1,
     },
     {
-      id: 'turret_bay_1',
-      typeId: 'turret_bay',
+      id: 'turret_station_1',
+      typeId: 'turret_station',
       level: 1,
       assignedBuilders: 0,
       productionProgress: 0,
       upgradeProgress: 0,
       isUnlocked: false, // unlockWave: 3
+      evolutionTier: 1,
     },
     {
-      id: 'recycler_1',
-      typeId: 'recycler',
+      id: 'training_facility_1',
+      typeId: 'training_facility',
       level: 1,
       assignedBuilders: 0,
       productionProgress: 0,
       upgradeProgress: 0,
       isUnlocked: false, // unlockWave: 5
-    },
-    {
-      id: 'training_ground_1',
-      typeId: 'training_ground',
-      level: 1,
-      assignedBuilders: 0,
-      productionProgress: 0,
-      upgradeProgress: 0,
-      isUnlocked: false, // unlockWave: 5
-    },
-    {
-      id: 'weapons_lab_1',
-      typeId: 'weapons_lab',
-      level: 1,
-      assignedBuilders: 0,
-      productionProgress: 0,
-      upgradeProgress: 0,
-      isUnlocked: false, // unlockWave: 10
-    },
-    {
-      id: 'factory_1',
-      typeId: 'factory',
-      level: 1,
-      assignedBuilders: 0,
-      productionProgress: 0,
-      upgradeProgress: 0,
-      isUnlocked: false, // unlockWave: 15
+      evolutionTier: 1,
     },
     {
       id: 'command_center_1',
@@ -150,6 +131,7 @@ export const createInitialGameState = (): GameState => ({
       productionProgress: 0,
       upgradeProgress: 0,
       isUnlocked: false, // unlockWave: 25
+      evolutionTier: 1,
     },
   ],
   combat: {

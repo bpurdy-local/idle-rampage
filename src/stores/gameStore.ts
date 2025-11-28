@@ -8,7 +8,13 @@ import {
   createInitialGameState,
 } from '../core/GameState';
 import {eventBus, GameEvents} from '../core/EventBus';
-import {getMaxTotalBuilders, getBuildingTypeById} from '../data/buildings';
+import {
+  getMaxTotalBuilders,
+  getEvolvableBuildingById,
+  getCurrentEvolutionTier,
+  getBuildingsEvolvingAtWave,
+} from '../data/buildings';
+import {getTierForPrestigeCount, wouldUnlockMilestone} from '../data/prestigeMilestones';
 
 interface GameActions {
   setScrap: (amount: number) => void;
@@ -240,14 +246,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     const newWave = state.currentWave + 1;
 
-    // Unlock buildings for the new wave
+    // Update buildings: unlock new ones and evolve existing ones
     const updatedBuildings = state.buildings.map(building => {
-      if (building.isUnlocked) return building;
-      const buildingType = getBuildingTypeById(building.typeId);
-      if (buildingType && buildingType.unlockWave <= newWave) {
-        return {...building, isUnlocked: true};
+      const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+      if (!evolvableBuilding) return building;
+
+      let updated = {...building};
+
+      // Unlock building if not already unlocked
+      if (!building.isUnlocked) {
+        const firstTier = evolvableBuilding.tiers[0];
+        if (firstTier.unlockWave <= newWave) {
+          updated.isUnlocked = true;
+        }
       }
-      return building;
+
+      // Check for evolution
+      if (building.isUnlocked || updated.isUnlocked) {
+        const currentTier = getCurrentEvolutionTier(evolvableBuilding, newWave);
+        if (currentTier.tier > building.evolutionTier) {
+          updated.evolutionTier = currentTier.tier;
+        }
+      }
+
+      return updated;
     });
 
     set({
@@ -258,7 +280,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
         highestWave: Math.max(state.player.highestWave, newWave),
       },
     });
+
+    // Emit wave cleared event
     eventBus.emit(GameEvents.WAVE_CLEARED, {wave: state.currentWave});
+
+    // Check for and emit building evolution events
+    const evolutions = getBuildingsEvolvingAtWave(newWave);
+    for (const {building, newTier} of evolutions) {
+      eventBus.emit(GameEvents.BUILDING_EVOLVED, {
+        buildingId: building.id,
+        newTier: newTier,
+      });
+    }
   },
 
   setPrestigeUpgrade: (upgradeId: string, level: number) => {
@@ -310,13 +343,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
   resetForPrestige: () => {
     const state = get();
     const initialState = createInitialGameState();
+    const newPrestigeCount = state.player.prestigeCount + 1;
+
+    // Check if this prestige unlocks a new milestone
+    const unlockedMilestone = wouldUnlockMilestone(
+      state.player.prestigeCount,
+      newPrestigeCount,
+    );
+
+    // Get the new tier based on the new prestige count
+    const newTier = getTierForPrestigeCount(newPrestigeCount);
 
     set({
       player: {
         ...initialState.player,
         blueprints: state.player.blueprints,
         totalBlueprintsEarned: state.player.totalBlueprintsEarned,
-        prestigeCount: state.player.prestigeCount + 1,
+        prestigeCount: newPrestigeCount,
+        buildingTier: newTier.tier,
         highestWave: state.player.highestWave,
         builders: {
           total: state.player.builders.total,
@@ -326,19 +370,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
         prestigeUpgrades: state.player.prestigeUpgrades,
         activeBoosts: [],
       },
-      buildings: state.buildings.map(b => ({
+      // Reset buildings to initial state (wave 1, tier 1)
+      buildings: initialState.buildings.map(b => ({
         ...b,
         level: 1,
         assignedBuilders: 0,
         productionProgress: 0,
         upgradeProgress: 0,
+        evolutionTier: 1,
       })),
       combat: initialState.combat,
       currentWave: 1,
     });
+
     eventBus.emit(GameEvents.PRESTIGE_TRIGGERED, {
-      prestigeCount: state.player.prestigeCount + 1,
+      prestigeCount: newPrestigeCount,
     });
+
+    // Emit milestone event if a new tier was unlocked
+    if (unlockedMilestone) {
+      eventBus.emit(GameEvents.MILESTONE_REACHED, {
+        tier: unlockedMilestone,
+        prestigeCount: newPrestigeCount,
+      });
+    }
   },
 
   loadState: (state: GameState) => set(state),

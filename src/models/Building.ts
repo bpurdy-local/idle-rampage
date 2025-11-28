@@ -1,5 +1,34 @@
-export type BuildingRole = 'production' | 'combat' | 'research' | 'utility';
+export type BuildingRole = 'production' | 'combat' | 'utility';
 
+/**
+ * Represents a single evolution tier of a building
+ */
+export interface BuildingEvolutionTier {
+  tier: number;
+  name: string;
+  description: string;
+  unlockWave: number;
+  baseProduction: number;
+  baseCost: number;
+  iconName: string;
+  color: string;
+}
+
+/**
+ * Represents an evolvable building with multiple tiers
+ */
+export interface EvolvableBuilding {
+  id: string;
+  role: BuildingRole;
+  costMultiplier: number;
+  maxBuilders: number;
+  tiers: BuildingEvolutionTier[];
+}
+
+/**
+ * Legacy BuildingType interface for compatibility during transition
+ * Maps to a specific tier of an EvolvableBuilding
+ */
 export interface BuildingType {
   id: string;
   name: string;

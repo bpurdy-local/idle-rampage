@@ -19,6 +19,7 @@ export interface Enemy {
   maxHealth: number;
   reward: number;
   wave: number;
+  isBoss?: boolean;
 }
 
 let enemyIdCounter = 0;
