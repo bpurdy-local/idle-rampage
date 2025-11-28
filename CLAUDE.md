@@ -44,11 +44,12 @@ The codebase follows a three-layer architecture:
 1. **Data Layer** (`src/models/`, `src/data/`) - Pure TypeScript interfaces and data definitions. No business logic.
 
 2. **Systems Layer** (`src/systems/`) - Stateless managers that operate on game state:
-   - `BuilderManager` - Pool tracking, assignment/unassignment, bulk operations, cross-building reassignment
    - `ProductionSystem` - Idle resource generation with wave bonuses, prestige multipliers, offline production (8hr cap, 50% efficiency)
    - `CombatSystem` - Auto-damage from combat buildings, tap damage with variance (80-120%), burst attacks (5% base chance, 5x multiplier)
    - `WaveManager` - Wave progression, enemy spawning by tier, wave timer (30-60s), reward calculations
    - `PrestigeSystem` - Reset mechanics, blueprint earning (exponential scaling from wave 10+), 7 permanent upgrades
+   - `LuckyDropSystem` - Random drops from wave clears (scrap, blueprints, boosts)
+   - `DailyRewardSystem` - Daily login bonus tracking
 
 3. **UI Layer** (`src/components/`, `src/screens/`) - React Native components that read from Zustand store and dispatch actions
 
@@ -75,7 +76,7 @@ src/
 ├── systems/        # Game logic managers (BuilderManager, CombatSystem, etc.)
 ├── services/       # SaveService (AsyncStorage), IAPService (react-native-iap)
 ├── stores/         # Zustand gameStore
-├── data/           # Data definitions (buildings, enemies, prestigeUpgrades, iapProducts)
+├── data/           # Data definitions (buildings, enemies, prestigeUpgrades, luckyDrops, iapProducts)
 ├── hooks/          # useGameLoop, useAppState
 ├── components/     # React Native components
 │   ├── common/     # Button, Card, ProgressBar
@@ -88,15 +89,17 @@ tests/              # Jest tests mirroring src/ structure
 
 ## Game Content
 
-### Buildings (6 types, 4 roles)
-| Building | Role | Unlock Wave | Purpose |
-|----------|------|-------------|---------|
-| Scrap Collector | production | 1 | Basic scrap generation |
-| Recycler | production | 5 | Improved production |
-| Factory | production | 15 | High-tier production |
-| Turret Bay | combat | 3 | Auto-damage dealing |
-| Weapons Lab | combat | 10 | Advanced combat |
-| Command Center | utility | 25 | Global production boost |
+### Buildings (6 types with evolution tiers)
+Each building evolves through multiple tiers as you progress through waves.
+
+| Building | Role | Base Unlock | Tiers | Purpose |
+|----------|------|-------------|-------|---------|
+| Scrap Works | production | Wave 1 | 5 | Scrap generation (Collector → Recycler → Refinery → Factory → Megaplex) |
+| Turret Station | combat | Wave 3 | 5 | Auto-damage (Turret Bay → Gun Emplacement → Weapons Lab → War Factory → Doom Fortress) |
+| Training Facility | combat | Wave 5 | 5 | Tap damage boost |
+| Command Center | utility | Wave 25 | 4 | Global production boost (5-20%) |
+| Salvage Yard | utility | Wave 8 | 5 | Bonus scrap from defeated enemies |
+| Engineering Bay | utility | Wave 12 | 5 | Reduces upgrade costs (max 50%)
 
 ### Enemy Tiers (5 difficulty levels)
 | Enemy | Waves | Base Health | Base Reward |
@@ -143,8 +146,10 @@ Key events for system communication:
 - `TICK` - Game loop tick with deltaTime
 - `WAVE_CLEARED` / `WAVE_FAILED` - Wave outcomes
 - `ENEMY_DAMAGED` / `ENEMY_DEFEATED` - Combat events
-- `BURST_ATTACK` - Burst trigger notification
-- `TAP_REGISTERED` - Player input
+- `TAP_REGISTERED` / `BURST_ATTACK` - Combat input events
+- `BUILDING_UPGRADED` / `BUILDING_EVOLVED` - Building progression
+- `LUCKY_DROP` - Random drop received
+- `MILESTONE_REACHED` - Prestige milestone achieved
 - `PRESTIGE_TRIGGERED` - Reset performed
 - `GAME_SAVED` / `GAME_LOADED` - Persistence events
 - `APP_BACKGROUNDED` / `APP_FOREGROUNDED` - Lifecycle events

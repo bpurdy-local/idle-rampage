@@ -51,38 +51,6 @@ export const formatPercent = (value: number, decimals: number = 0): string => {
   return `${(value * 100).toFixed(decimals)}%`;
 };
 
-/**
- * Format a date relative to now
- */
-export const formatRelativeTime = (timestamp: number): string => {
-  const now = Date.now();
-  const diff = now - timestamp;
-
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 0) return `${days}d ago`;
-  if (hours > 0) return `${hours}h ago`;
-  if (minutes > 0) return `${minutes}m ago`;
-  return 'Just now';
-};
-
-/**
- * Format scrap amount with icon
- */
-export const formatScrap = (amount: number): string => {
-  return `${formatNumber(amount)} Scrap`;
-};
-
-/**
- * Format blueprints amount
- */
-export const formatBlueprints = (amount: number): string => {
-  return `${formatNumber(amount)} BP`;
-};
-
 export const formatOfflineDuration = (milliseconds: number): string => {
   const totalSeconds = Math.floor(milliseconds / 1000);
   const days = Math.floor(totalSeconds / 86400);

@@ -87,8 +87,3 @@ export const PRESTIGE_UPGRADES: PrestigeUpgradeDefinition[] = [
   },
 ];
 
-export const getPrestigeUpgradeById = (
-  id: string,
-): PrestigeUpgradeDefinition | undefined => {
-  return PRESTIGE_UPGRADES.find(u => u.id === id);
-};

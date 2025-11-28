@@ -26,8 +26,8 @@ export interface EvolvableBuilding {
 }
 
 /**
- * Legacy BuildingType interface for compatibility during transition
- * Maps to a specific tier of an EvolvableBuilding
+ * BuildingType represents a building at a specific evolution tier.
+ * Created from EvolvableBuilding + BuildingEvolutionTier via toBuildingType().
  */
 export interface BuildingType {
   id: string;

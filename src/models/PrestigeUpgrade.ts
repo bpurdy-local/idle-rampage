@@ -2,7 +2,6 @@ export type PrestigeEffectType =
   | 'production_multiplier'
   | 'tap_power'
   | 'auto_damage'
-  | 'building_speed'
   | 'wave_rewards'
   | 'burst_chance'
   | 'burst_damage'

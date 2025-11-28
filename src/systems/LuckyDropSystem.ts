@@ -7,12 +7,6 @@ export interface DropResult {
   scaledAmount: number;
 }
 
-export interface LuckyDropEventData {
-  drop: LuckyDrop;
-  amount: number;
-  scaledAmount: number;
-}
-
 export class LuckyDropSystem {
   private totalWeight: number;
 
@@ -46,7 +40,7 @@ export class LuckyDropSystem {
       scaledAmount,
     };
 
-    eventBus.emit<LuckyDropEventData>(GameEvents.LUCKY_DROP, result);
+    eventBus.emit<DropResult>(GameEvents.LUCKY_DROP, result);
 
     return result;
   }

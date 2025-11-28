@@ -5,8 +5,6 @@ import {
   EVOLVABLE_BUILDINGS,
 } from '../data/buildings';
 import {calculateProduction} from '../models/Building';
-import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
-import {getUpgradeEffect} from '../models/PrestigeUpgrade';
 
 export interface ProductionResult {
   buildingId: string;
@@ -30,16 +28,6 @@ export interface ProductionBonuses {
 export class ProductionSystem {
   calculateWaveBonus(currentWave: number): number {
     return 1 + Math.log10(currentWave + 1) * 0.5;
-  }
-
-  calculatePrestigeBonus(prestigeUpgradeLevels: Map<string, number>): number {
-    const productionUpgrade = PRESTIGE_UPGRADES.find(
-      u => u.effectType === 'production_multiplier',
-    );
-    if (!productionUpgrade) return 1;
-
-    const level = prestigeUpgradeLevels.get(productionUpgrade.id) ?? 0;
-    return getUpgradeEffect(productionUpgrade, level);
   }
 
   calculateCommandCenterBonus(buildings: BuildingState[]): number {
