@@ -39,6 +39,8 @@ export class CombatSystem {
       const buildingType = getBuildingTypeById(building.typeId);
       if (!buildingType) continue;
 
+      // Skip training ground - it boosts tap damage, not auto damage
+      if (buildingType.id === 'training_ground') continue;
       if (buildingType.role !== 'combat') continue;
       if (!building.isUnlocked || building.assignedBuilders === 0) continue;
 
@@ -51,6 +53,28 @@ export class CombatSystem {
     }
 
     return totalDamage * bonuses.prestigeAutoDamage * bonuses.boostMultiplier;
+  }
+
+  calculateTapDamageBonus(buildings: BuildingState[]): number {
+    let totalBonus = 0;
+
+    for (const building of buildings) {
+      const buildingType = getBuildingTypeById(building.typeId);
+      if (!buildingType) continue;
+
+      if (buildingType.id !== 'training_ground') continue;
+      if (!building.isUnlocked || building.assignedBuilders === 0) continue;
+
+      // Use same formula as other buildings: base * levelMultiplier * builders
+      const bonus = calculateProduction(
+        buildingType,
+        building.level,
+        building.assignedBuilders,
+      );
+      totalBonus += bonus;
+    }
+
+    return totalBonus;
   }
 
   calculateTapDamage(

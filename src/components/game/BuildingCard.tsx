@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useCallback} from 'react';
-import {View, Text, StyleSheet, Pressable, GestureResponderEvent} from 'react-native';
+import {View, Text, StyleSheet, Pressable, GestureResponderEvent, TouchableOpacity} from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -22,6 +22,7 @@ interface BuildingCardProps {
   onAssignBuilder: () => void;
   onUnassignBuilder: () => void;
   onUpgrade: () => void;
+  onShowInfo: () => void;
   availableBuilders: number;
 }
 
@@ -36,10 +37,23 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   onAssignBuilder,
   onUnassignBuilder,
   onUpgrade,
+  onShowInfo,
   availableBuilders,
 }) => {
   const canAssign = availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   const canUnassign = building.assignedBuilders > 0;
+
+  // Refs to track latest enabled states for hold-to-repeat
+  const canAssignRef = useRef(canAssign);
+  const canUnassignRef = useRef(canUnassign);
+  const canAffordUpgradeRef = useRef(canAffordUpgrade);
+
+  // Keep refs in sync with latest values
+  useEffect(() => {
+    canAssignRef.current = canAssign;
+    canUnassignRef.current = canUnassign;
+    canAffordUpgradeRef.current = canAffordUpgrade;
+  });
 
   const cardOpacity = useSharedValue(0);
   const cardTranslateX = useSharedValue(-50);
@@ -126,15 +140,20 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   const createHoldablePressHandler = (
     scale: Animated.SharedValue<number>,
     action: () => void,
-    enabled: boolean,
+    isEnabled: () => boolean,
   ) => ({
     onPressIn: (_e: GestureResponderEvent) => {
-      if (enabled) {
+      if (isEnabled()) {
         scale.value = withSpring(0.9, {damping: 15, stiffness: 400});
         // Start hold-to-repeat after delay
         holdTimeoutRef.current = setTimeout(() => {
           holdIntervalRef.current = setInterval(() => {
-            action();
+            // Re-check if action is still enabled before each repeat
+            if (isEnabled()) {
+              action();
+            } else {
+              clearHoldTimers();
+            }
           }, HOLD_INTERVAL);
         }, HOLD_DELAY);
       }
@@ -144,7 +163,7 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
       clearHoldTimers();
     },
     onPress: () => {
-      if (enabled) {
+      if (isEnabled()) {
         scale.value = withSequence(
           withTiming(0.85, {duration: 50}),
           withSpring(1, {damping: 10, stiffness: 400}),
@@ -170,7 +189,12 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
     <Animated.View style={[styles.container, {borderLeftColor: getRoleColor()}, cardAnimatedStyle]}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.name}>{buildingType.name}</Text>
+          <View style={styles.titleLeft}>
+            <Text style={styles.name}>{buildingType.name}</Text>
+            <TouchableOpacity style={styles.infoBtn} onPress={onShowInfo}>
+              <Text style={styles.infoBtnText}>?</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.level}>Lv.{building.level}</Text>
         </View>
         <Text style={styles.description}>{buildingType.description}</Text>
@@ -204,20 +228,20 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
         <View style={styles.builderActions}>
           <AnimatedPressable
             style={[styles.builderBtn, !canUnassign && styles.btnDisabled, minusBtnStyle]}
-            {...createHoldablePressHandler(minusBtnScale, onUnassignBuilder, canUnassign)}>
+            {...createHoldablePressHandler(minusBtnScale, onUnassignBuilder, () => canUnassignRef.current)}>
             <Text style={styles.builderBtnText}>-</Text>
           </AnimatedPressable>
           <Text style={styles.builderCount}>👷 {building.assignedBuilders}</Text>
           <AnimatedPressable
             style={[styles.builderBtn, !canAssign && styles.btnDisabled, plusBtnStyle]}
-            {...createHoldablePressHandler(plusBtnScale, onAssignBuilder, canAssign)}>
+            {...createHoldablePressHandler(plusBtnScale, onAssignBuilder, () => canAssignRef.current)}>
             <Text style={styles.builderBtnText}>+</Text>
           </AnimatedPressable>
         </View>
 
         <AnimatedPressable
           style={[styles.upgradeBtn, !canAffordUpgrade && styles.btnDisabled, upgradeBtnStyle]}
-          {...createPressHandler(upgradeBtnScale, onUpgrade, canAffordUpgrade)}>
+          {...createHoldablePressHandler(upgradeBtnScale, onUpgrade, () => canAffordUpgradeRef.current)}>
           <Text style={styles.upgradeBtnText}>
             Upgrade ({formatNumber(upgradeCost)})
           </Text>
@@ -246,10 +270,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  titleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   name: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  infoBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoBtnText: {
+    color: '#aaa',
+    fontSize: 12,
+    fontWeight: '700',
   },
   level: {
     color: '#ff9800',

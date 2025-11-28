@@ -17,6 +17,7 @@ import {
   ResourceDisplay,
   EnemyDisplay,
   BuildingCard,
+  BuildingInfoModal,
   PrestigePanel,
   PrestigeTabGlow,
   DailyRewardModal,
@@ -58,6 +59,7 @@ export const GameScreen: React.FC = () => {
   const [tapRipples, setTapRipples] = useState<TapRippleData[]>([]);
   const [showVictoryFlash, setShowVictoryFlash] = useState(false);
   const [resourcePopups, setResourcePopups] = useState<ResourcePopupData[]>([]);
+  const [selectedBuildingInfo, setSelectedBuildingInfo] = useState<BuildingType | null>(null);
   const lastTapTimeRef = useRef<number>(0);
   const enemyAreaRef = useRef<{x: number; y: number}>({x: 200, y: 250});
   const hasCheckedOfflineEarnings = useRef(false);
@@ -370,7 +372,11 @@ export const GameScreen: React.FC = () => {
       }
       lastTapTimeRef.current = now;
 
-      const tapDamage = combatSystem.calculateTapDamage(10, {
+      // Calculate base tap damage with Training Ground bonus
+      const trainingBonus = combatSystem.calculateTapDamageBonus(buildings);
+      const baseTapDamage = 10 + trainingBonus;
+
+      const tapDamage = combatSystem.calculateTapDamage(baseTapDamage, {
         prestigeAutoDamage: prestigeBonuses.autoDamageMultiplier,
         prestigeTapPower: prestigeBonuses.tapPowerMultiplier,
         prestigeBurstChance: prestigeBonuses.burstChanceBonus,
@@ -403,7 +409,7 @@ export const GameScreen: React.FC = () => {
         spawnTapRipple(tapX, tapY);
       }
     },
-    [combat, combatSystem, prestigeBonuses, damageEnemy, spawnPopup, spawnTapRipple],
+    [combat, combatSystem, buildings, prestigeBonuses, damageEnemy, spawnPopup, spawnTapRipple],
   );
 
   // Handle builder assignment (directly through store since it has validation)
@@ -544,6 +550,7 @@ export const GameScreen: React.FC = () => {
                 onAssignBuilder={() => handleAssignBuilder(building.id)}
                 onUnassignBuilder={() => handleUnassignBuilder(building.id)}
                 onUpgrade={() => handleUpgrade(building.id)}
+                onShowInfo={() => setSelectedBuildingInfo(buildingType)}
               />
             );
           })}
@@ -594,6 +601,12 @@ export const GameScreen: React.FC = () => {
           />
         )}
       </Modal>
+
+      <BuildingInfoModal
+        visible={selectedBuildingInfo !== null}
+        building={selectedBuildingInfo}
+        onClose={() => setSelectedBuildingInfo(null)}
+      />
     </SafeAreaView>
   );
 };

@@ -55,7 +55,7 @@ export const LUCKY_DROPS: LuckyDrop[] = [
 ];
 
 export const DROP_CONFIG = {
-  baseDropChance: 0.08,
+  baseDropChance: 0.75, // 75% chance for testing (was 0.25 / 25%)
   minWaveForDrops: 1,
 };
 

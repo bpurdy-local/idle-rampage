@@ -95,16 +95,7 @@ export const createInitialGameState = (): GameState => ({
       assignedBuilders: 0,
       productionProgress: 0,
       upgradeProgress: 0,
-      isUnlocked: true,
-    },
-    {
-      id: 'recycler_1',
-      typeId: 'recycler',
-      level: 1,
-      assignedBuilders: 0,
-      productionProgress: 0,
-      upgradeProgress: 0,
-      isUnlocked: true,
+      isUnlocked: true, // unlockWave: 1
     },
     {
       id: 'turret_bay_1',
@@ -113,7 +104,52 @@ export const createInitialGameState = (): GameState => ({
       assignedBuilders: 0,
       productionProgress: 0,
       upgradeProgress: 0,
-      isUnlocked: true,
+      isUnlocked: false, // unlockWave: 3
+    },
+    {
+      id: 'recycler_1',
+      typeId: 'recycler',
+      level: 1,
+      assignedBuilders: 0,
+      productionProgress: 0,
+      upgradeProgress: 0,
+      isUnlocked: false, // unlockWave: 5
+    },
+    {
+      id: 'training_ground_1',
+      typeId: 'training_ground',
+      level: 1,
+      assignedBuilders: 0,
+      productionProgress: 0,
+      upgradeProgress: 0,
+      isUnlocked: false, // unlockWave: 5
+    },
+    {
+      id: 'weapons_lab_1',
+      typeId: 'weapons_lab',
+      level: 1,
+      assignedBuilders: 0,
+      productionProgress: 0,
+      upgradeProgress: 0,
+      isUnlocked: false, // unlockWave: 10
+    },
+    {
+      id: 'factory_1',
+      typeId: 'factory',
+      level: 1,
+      assignedBuilders: 0,
+      productionProgress: 0,
+      upgradeProgress: 0,
+      isUnlocked: false, // unlockWave: 15
+    },
+    {
+      id: 'command_center_1',
+      typeId: 'command_center',
+      level: 1,
+      assignedBuilders: 0,
+      productionProgress: 0,
+      upgradeProgress: 0,
+      isUnlocked: false, // unlockWave: 25
     },
   ],
   combat: {

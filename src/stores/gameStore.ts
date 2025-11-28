@@ -8,7 +8,7 @@ import {
   createInitialGameState,
 } from '../core/GameState';
 import {eventBus, GameEvents} from '../core/EventBus';
-import {getMaxTotalBuilders} from '../data/buildings';
+import {getMaxTotalBuilders, getBuildingTypeById} from '../data/buildings';
 
 interface GameActions {
   setScrap: (amount: number) => void;
@@ -239,8 +239,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   advanceWave: () => {
     const state = get();
     const newWave = state.currentWave + 1;
+
+    // Unlock buildings for the new wave
+    const updatedBuildings = state.buildings.map(building => {
+      if (building.isUnlocked) return building;
+      const buildingType = getBuildingTypeById(building.typeId);
+      if (buildingType && buildingType.unlockWave <= newWave) {
+        return {...building, isUnlocked: true};
+      }
+      return building;
+    });
+
     set({
       currentWave: newWave,
+      buildings: updatedBuildings,
       player: {
         ...state.player,
         highestWave: Math.max(state.player.highestWave, newWave),

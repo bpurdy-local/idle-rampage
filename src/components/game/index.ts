@@ -1,6 +1,7 @@
 export {ResourceDisplay} from './ResourceDisplay';
 export {EnemyDisplay} from './EnemyDisplay';
 export {BuildingCard} from './BuildingCard';
+export {BuildingInfoModal} from './BuildingInfoModal';
 export {PrestigePanel} from './PrestigePanel';
 export {PrestigeTabGlow} from './PrestigeTabGlow';
 export {DailyRewardModal} from './DailyRewardModal';
