@@ -31,6 +31,7 @@ import {
   DamagePopupManager,
   MilestonePopup,
   BuildingEvolutionPopup,
+  SettingsModal,
 } from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
 import {luckyDropSystem, DropResult} from '../systems/LuckyDropSystem';
@@ -78,6 +79,7 @@ export const GameScreen: React.FC = () => {
     buildingId: string;
     newTier: BuildingEvolutionTier;
   } | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const lastTapTimeRef = useRef<number>(0);
   const enemyAreaRef = useRef<{x: number; y: number}>({x: 200, y: 250});
   const hasCheckedOfflineEarnings = useRef(false);
@@ -542,6 +544,7 @@ export const GameScreen: React.FC = () => {
         scrap={player.scrap}
         blueprints={player.blueprints}
         builders={player.builders}
+        onSettingsPress={() => setShowSettings(true)}
       />
 
       <EnemyDisplay
@@ -695,6 +698,12 @@ export const GameScreen: React.FC = () => {
         buildingId={buildingEvolution?.buildingId ?? ''}
         newTier={buildingEvolution?.newTier ?? null}
         onDismiss={() => setBuildingEvolution(null)}
+      />
+
+      <SettingsModal
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+        buildings={buildings}
       />
     </SafeAreaView>
   );

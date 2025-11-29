@@ -17,3 +17,4 @@ export {DamagePopupManager} from './DamagePopupManager';
 export type {DamagePopupData} from './DamagePopup';
 export {MilestonePopup} from './MilestonePopup';
 export {BuildingEvolutionPopup} from './BuildingEvolutionPopup';
+export {SettingsModal} from './SettingsModal';

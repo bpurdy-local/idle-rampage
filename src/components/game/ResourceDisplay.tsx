@@ -1,5 +1,5 @@
 import React, {useEffect, useRef} from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,6 +13,7 @@ interface ResourceDisplayProps {
   scrap: number;
   blueprints: number;
   builders: {total: number; available: number};
+  onSettingsPress?: () => void;
 }
 
 interface AnimatedValueProps {
@@ -57,6 +58,7 @@ export const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
   scrap,
   blueprints,
   builders,
+  onSettingsPress,
 }) => {
   return (
     <View style={styles.container}>
@@ -77,6 +79,11 @@ export const ResourceDisplay: React.FC<ResourceDisplayProps> = ({
         </Text>
         <Text style={styles.label}>Builders</Text>
       </View>
+      {onSettingsPress && (
+        <TouchableOpacity style={styles.settingsBtn} onPress={onSettingsPress}>
+          <Text style={styles.settingsIcon}>☰</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -108,5 +115,20 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 10,
     marginTop: 2,
+  },
+  settingsBtn: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#333',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsIcon: {
+    color: '#fff',
+    fontSize: 18,
   },
 });
