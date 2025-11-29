@@ -4,7 +4,6 @@ import {calculateProduction} from '../models/Building';
 import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {getUpgradeEffect} from '../models/PrestigeUpgrade';
 import {eventBus, GameEvents} from '../core/EventBus';
-import {SynergySystem, SynergyBonuses} from './SynergySystem';
 
 export interface CombatBonuses {
   prestigeAutoDamage: number;
@@ -13,7 +12,6 @@ export interface CombatBonuses {
   prestigeBurstDamage: number;
   boostMultiplier: number;
   tierMultiplier: number;
-  synergyDamageMultiplier: number;
 }
 
 export interface DamageResult {
@@ -29,7 +27,11 @@ export interface CombatTickResult {
   totalDamage: number;
   enemyDefeated: boolean;
   timerExpired: boolean;
+  scrapFromDamage: number;
 }
+
+// What percentage of the enemy's reward is earned via damage (rest at wave completion)
+export const DAMAGE_SCRAP_PERCENT = 0.5; // 50% from damage, 50% from wave completion
 
 export class CombatSystem {
   calculateAutoDamage(
@@ -60,7 +62,7 @@ export class CombatSystem {
       totalDamage += baseDamage;
     }
 
-    return totalDamage * bonuses.prestigeAutoDamage * bonuses.boostMultiplier * bonuses.tierMultiplier * bonuses.synergyDamageMultiplier;
+    return totalDamage * bonuses.prestigeAutoDamage * bonuses.boostMultiplier * bonuses.tierMultiplier;
   }
 
   calculateTapDamageBonus(buildings: BuildingState[]): number {
@@ -99,7 +101,7 @@ export class CombatSystem {
     // Tightened variance: 90-110% (was 80-120%) for more consistent feel
     const randomVariance = 0.9 + Math.random() * 0.2;
     return Math.floor(
-      baseTapDamage * bonuses.prestigeTapPower * bonuses.boostMultiplier * bonuses.tierMultiplier * bonuses.synergyDamageMultiplier * randomVariance,
+      baseTapDamage * bonuses.prestigeTapPower * bonuses.boostMultiplier * bonuses.tierMultiplier * randomVariance,
     );
   }
 
@@ -115,6 +117,27 @@ export class CombatSystem {
       : 1;
 
     return {triggered, multiplier};
+  }
+
+  /**
+   * Calculate scrap earned from dealing damage to an enemy.
+   * Scrap is proportional to damage dealt relative to enemy's max health.
+   */
+  calculateScrapFromDamage(
+    damage: number,
+    enemy: EnemyState,
+    rewardMultiplier: number = 1,
+  ): number {
+    if (damage <= 0 || enemy.maxHealth <= 0) return 0;
+
+    // The pool of scrap available from damage (rest comes from wave completion)
+    const damageScrapPool = enemy.reward * DAMAGE_SCRAP_PERCENT;
+
+    // Scrap earned is proportional to damage dealt vs max health
+    const damagePercent = damage / enemy.maxHealth;
+    const scrapEarned = damageScrapPool * damagePercent * rewardMultiplier;
+
+    return Math.floor(scrapEarned);
   }
 
   applyDamage(
@@ -177,6 +200,7 @@ export class CombatSystem {
     combat: CombatState,
     bonuses: CombatBonuses,
     deltaTime: number,
+    rewardMultiplier: number = 1,
   ): CombatTickResult {
     const result: CombatTickResult = {
       autoDamage: 0,
@@ -184,6 +208,7 @@ export class CombatSystem {
       totalDamage: 0,
       enemyDefeated: false,
       timerExpired: false,
+      scrapFromDamage: 0,
     };
 
     if (!enemy || !combat.isActive) {
@@ -218,6 +243,9 @@ export class CombatSystem {
     result.totalDamage = totalDamage;
 
     if (totalDamage > 0) {
+      // Calculate scrap earned from this damage
+      result.scrapFromDamage = this.calculateScrapFromDamage(totalDamage, enemy, rewardMultiplier);
+
       const damageResult = this.applyDamage(enemy, totalDamage, burst.triggered);
       result.enemyDefeated = damageResult.isDefeated;
     }
@@ -227,7 +255,6 @@ export class CombatSystem {
 
   getPrestigeBonuses(
     prestigeUpgradeLevels: Map<string, number>,
-    synergyBonuses?: SynergyBonuses,
   ): CombatBonuses {
     const getBonusForType = (effectType: string): number => {
       const upgrade = PRESTIGE_UPGRADES.find(u => u.effectType === effectType);
@@ -243,16 +270,7 @@ export class CombatSystem {
       prestigeBurstDamage: getBonusForType('burst_damage') / 5,
       boostMultiplier: 1,
       tierMultiplier: 1,
-      synergyDamageMultiplier: synergyBonuses?.damageMultiplier ?? 1,
     };
-  }
-
-  /**
-   * Create a SynergySystem instance and calculate bonuses from buildings.
-   */
-  getSynergyBonuses(buildings: BuildingState[]): SynergyBonuses {
-    const synergySystem = new SynergySystem();
-    return synergySystem.calculateSynergyBonuses(buildings);
   }
 
   createInitialCombatState(): CombatState {

@@ -20,16 +20,6 @@ export interface PrestigeUpgradeDefinition {
   iconName: string;
 }
 
-export interface PrestigeUpgrade {
-  id: string;
-  level: number;
-}
-
-export const createPrestigeUpgrade = (definitionId: string): PrestigeUpgrade => ({
-  id: definitionId,
-  level: 0,
-});
-
 export const getUpgradeCost = (
   definition: PrestigeUpgradeDefinition,
   currentLevel: number,
@@ -45,13 +35,4 @@ export const getUpgradeEffect = (
 ): number => {
   if (currentLevel === 0) return 1;
   return definition.baseEffect + definition.effectPerLevel * currentLevel;
-};
-
-export const canUpgrade = (
-  definition: PrestigeUpgradeDefinition,
-  currentLevel: number,
-  availableBlueprints: number,
-): boolean => {
-  if (currentLevel >= definition.maxLevel) return false;
-  return availableBlueprints >= getUpgradeCost(definition, currentLevel);
 };

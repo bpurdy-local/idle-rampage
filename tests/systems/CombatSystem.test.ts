@@ -1,4 +1,4 @@
-import {CombatSystem, CombatBonuses} from '../../src/systems/CombatSystem';
+import {CombatSystem, CombatBonuses, DAMAGE_SCRAP_PERCENT} from '../../src/systems/CombatSystem';
 import {BuildingState, CombatState, EnemyState} from '../../src/core/GameState';
 
 const createMockEnemy = (health: number = 100): EnemyState => ({
@@ -49,7 +49,6 @@ const defaultBonuses: CombatBonuses = {
   prestigeBurstDamage: 1,
   boostMultiplier: 1,
   tierMultiplier: 1,
-  synergyDamageMultiplier: 1,
 };
 
 describe('CombatSystem', () => {
@@ -235,6 +234,115 @@ describe('CombatSystem', () => {
 
       const result = system.tick(enemy, buildings, combat, defaultBonuses, 10000);
       expect(result.enemyDefeated).toBe(true);
+    });
+  });
+
+  describe('calculateScrapFromDamage', () => {
+    it('returns 0 for 0 damage', () => {
+      const enemy = createMockEnemy(100);
+      const scrap = system.calculateScrapFromDamage(0, enemy);
+      expect(scrap).toBe(0);
+    });
+
+    it('returns 0 for enemy with 0 max health', () => {
+      const enemy = {...createMockEnemy(100), maxHealth: 0};
+      const scrap = system.calculateScrapFromDamage(50, enemy);
+      expect(scrap).toBe(0);
+    });
+
+    it('returns proportional scrap based on damage percent', () => {
+      const enemy = createMockEnemy(100);
+      enemy.reward = 100;
+
+      // Deal 50% of max health in damage
+      const scrap = system.calculateScrapFromDamage(50, enemy);
+
+      // Should get 50% of the damage scrap pool (which is 50% of total reward)
+      const expectedPool = 100 * DAMAGE_SCRAP_PERCENT;
+      const expectedScrap = Math.floor(expectedPool * 0.5);
+      expect(scrap).toBe(expectedScrap);
+    });
+
+    it('returns full damage pool when dealing 100% damage', () => {
+      const enemy = createMockEnemy(100);
+      enemy.reward = 100;
+
+      const scrap = system.calculateScrapFromDamage(100, enemy);
+
+      const expectedScrap = Math.floor(100 * DAMAGE_SCRAP_PERCENT);
+      expect(scrap).toBe(expectedScrap);
+    });
+
+    it('applies reward multiplier', () => {
+      const enemy = createMockEnemy(100);
+      enemy.reward = 100;
+
+      const baseScrap = system.calculateScrapFromDamage(50, enemy, 1);
+      const multipliedScrap = system.calculateScrapFromDamage(50, enemy, 2);
+
+      expect(multipliedScrap).toBe(baseScrap * 2);
+    });
+
+    it('floors the result to integer', () => {
+      const enemy = createMockEnemy(100);
+      enemy.reward = 7; // Odd number to create fractional result
+
+      const scrap = system.calculateScrapFromDamage(33, enemy);
+      expect(Number.isInteger(scrap)).toBe(true);
+    });
+  });
+
+  describe('tick with scrapFromDamage', () => {
+    it('returns scrapFromDamage when dealing auto damage', () => {
+      const enemy = createMockEnemy(100);
+      enemy.reward = 1000; // Large reward so even small damage yields scrap
+      const combat = createMockCombatState();
+      const buildings = [createMockTurretBuilding(10)];
+
+      // Use a longer deltaTime to ensure we deal enough damage
+      const result = system.tick(enemy, buildings, combat, defaultBonuses, 5000, 1);
+
+      // Should have some scrap from the damage dealt
+      expect(result.totalDamage).toBeGreaterThan(0);
+      expect(result.scrapFromDamage).toBeGreaterThan(0);
+    });
+
+    it('scrapFromDamage scales with reward multiplier', () => {
+      const enemy1 = createMockEnemy(1000);
+      enemy1.reward = 100;
+      const enemy2 = createMockEnemy(1000);
+      enemy2.reward = 100;
+      const combat = createMockCombatState();
+      const buildings = [createMockTurretBuilding(10)];
+
+      const result1 = system.tick(enemy1, buildings, combat, defaultBonuses, 1000, 1);
+      const result2 = system.tick(enemy2, buildings, combat, defaultBonuses, 1000, 2);
+
+      // With 2x multiplier, should get roughly 2x scrap (may not be exact due to damage variance)
+      if (result1.scrapFromDamage > 0 && result2.scrapFromDamage > 0) {
+        expect(result2.scrapFromDamage).toBeGreaterThan(result1.scrapFromDamage);
+      }
+    });
+
+    it('returns 0 scrapFromDamage when no damage dealt', () => {
+      const enemy = createMockEnemy(100);
+      const combat = createMockCombatState();
+
+      // No buildings = no auto damage
+      const result = system.tick(enemy, [], combat, defaultBonuses, 1000);
+
+      expect(result.scrapFromDamage).toBe(0);
+    });
+  });
+
+  describe('DAMAGE_SCRAP_PERCENT constant', () => {
+    it('is between 0 and 1', () => {
+      expect(DAMAGE_SCRAP_PERCENT).toBeGreaterThan(0);
+      expect(DAMAGE_SCRAP_PERCENT).toBeLessThanOrEqual(1);
+    });
+
+    it('is currently set to 50%', () => {
+      expect(DAMAGE_SCRAP_PERCENT).toBe(0.5);
     });
   });
 

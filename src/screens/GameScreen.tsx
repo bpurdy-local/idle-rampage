@@ -12,7 +12,7 @@ import {
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 import {useGameStore} from '../stores/gameStore';
-import {useGameLoop} from '../hooks/useGameLoop';
+import {useGameTick} from '../hooks/useGameTick';
 import {
   ResourceDisplay,
   EnemyDisplay,
@@ -36,16 +36,14 @@ import {
 } from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
 import {getScaledRewardAmount} from '../data/dailyRewards';
-import {luckyDropSystem, DropResult} from '../systems/LuckyDropSystem';
+import {DropResult} from '../systems/LuckyDropSystem';
 import {BoostState} from '../core/GameState';
 import {eventBus, GameEvents} from '../core/EventBus';
 import {useDamagePopups} from '../hooks/useDamagePopups';
 import {
-  EVOLVABLE_BUILDINGS,
   getEvolvableBuildingById,
   toBuildingType,
   getNextEvolutionTier,
-  calculateSalvageBonus,
   calculateEngineeringDiscount,
 } from '../data/buildings';
 import {BuildingEvolutionTier} from '../models/Building';
@@ -55,6 +53,7 @@ import {ProductionSystem} from '../systems/ProductionSystem';
 import {CombatSystem} from '../systems/CombatSystem';
 import {WaveManager} from '../systems/WaveManager';
 import {PrestigeSystem} from '../systems/PrestigeSystem';
+import {DEBUG_CONFIG} from '../data/debugConfig';
 import {saveService} from '../services/SaveService';
 
 // Minimum time between taps in milliseconds (prevents auto-clicker abuse)
@@ -149,9 +148,6 @@ export const GameScreen: React.FC = () => {
       case 'blueprints':
         addBlueprints(drop.scaledAmount);
         break;
-      case 'builder':
-        addBuilders(drop.scaledAmount);
-        break;
       case 'boost':
         if (drop.drop.boostDuration) {
           const boost: BoostState = {
@@ -164,122 +160,33 @@ export const GameScreen: React.FC = () => {
         break;
     }
     setActiveDrop(drop);
-  }, [addScrap, addBlueprints, addBuilders, addBoost]);
+  }, [addScrap, addBlueprints, addBoost]);
 
-  // Game tick - reads fresh state from store to avoid stale closures during rapid taps
-  const handleTick = useCallback(
-    (deltaMs: number) => {
-      // Get fresh state from store to avoid stale closure issues
-      const state = useGameStore.getState();
-      const freshCombat = state.combat;
-      const freshPlayer = state.player;
-      const freshBuildings = state.buildings;
-      const freshCurrentWave = state.currentWave;
-
-      // Calculate prestige bonuses with fresh state
-      const freshPrestigeBonuses = prestigeSystem.calculateBonuses(freshPlayer.prestigeUpgrades);
-
-      // Calculate production bonuses
-      const tierMultiplier = PRESTIGE_TIERS[freshPlayer.buildingTier]?.multiplier ?? 1;
-      const productionBonuses = {
-        waveBonus: productionSystem.calculateWaveBonus(freshCurrentWave),
-        prestigeBonus: freshPrestigeBonuses.productionMultiplier,
-        boostMultiplier: 1,
-        commandCenterBonus: productionSystem.calculateCommandCenterBonus(freshBuildings),
-        tierMultiplier,
-      };
-
-      // Production tick
-      const productionResult = productionSystem.tick(
-        freshBuildings,
-        productionBonuses,
-        deltaMs,
-      );
-
-      if (productionResult.totalProduction > 0) {
-        state.setScrap(freshPlayer.scrap + productionResult.totalProduction * freshPrestigeBonuses.waveRewardsMultiplier);
-      }
-
-      // Combat tick
-      if (freshCombat.isActive && freshCombat.currentEnemy) {
-        // Update wave timer
-        const newTimer = freshCombat.waveTimer - deltaMs / 1000;
-        state.setWaveTimer(newTimer);
-
-        const combatBuildings = freshBuildings.filter(b => {
-          const evolvable = EVOLVABLE_BUILDINGS.find(e => e.id === b.typeId);
-          return evolvable?.role === 'combat';
-        });
-
-        const combatResult = combatSystem.tick(
-          freshCombat.currentEnemy,
-          combatBuildings,
-          {...freshCombat, waveTimer: newTimer},
-          {
-            prestigeAutoDamage: freshPrestigeBonuses.autoDamageMultiplier,
-            prestigeTapPower: freshPrestigeBonuses.tapPowerMultiplier,
-            prestigeBurstChance: freshPrestigeBonuses.burstChanceBonus,
-            prestigeBurstDamage: freshPrestigeBonuses.burstDamageMultiplier,
-            boostMultiplier: 1,
-            tierMultiplier,
-            synergyDamageMultiplier: 1,
-          },
-          deltaMs,
-        );
-
-        if (combatResult.enemyDefeated) {
-          // Wave complete - apply salvage yard bonus to rewards
-          const salvageBonus = calculateSalvageBonus(freshBuildings);
-          const reward = waveManager.calculateWaveReward(
-            freshCurrentWave,
-            freshCombat.currentEnemy.reward,
-            freshPrestigeBonuses.waveRewardsMultiplier * salvageBonus,
-            1,
-          );
-          state.setScrap(freshPlayer.scrap + reward.totalScrap);
-
-          // Show victory flash and resource popup
-          const isBoss = freshCombat.currentEnemy.isBoss === true;
-          setVictoryWasBoss(isBoss);
-          setShowVictoryFlash(true);
-          spawnResourcePopup(reward.totalScrap, 'scrap', SCREEN_WIDTH / 2 - 50, 180);
-
-          // Roll for lucky drop (guaranteed for bosses)
-          const dropResult = luckyDropSystem.rollForDrop(freshCurrentWave, freshCombat.currentEnemy.reward, isBoss);
-          if (dropResult) {
-            applyDropReward(dropResult);
-          }
-
-          // Reset combat state before advancing wave
-          state.setCombatActive(false);
-          state.setCurrentEnemy(null);
-          state.advanceWave();
-        } else if (combatResult.timerExpired) {
-          // Wave failed - restart same wave
-          state.setCombatActive(false);
-          state.setCurrentEnemy(null);
-        }
-      } else if (!freshCombat.isActive) {
-        // Start next wave
-        const enemy = waveManager.spawnEnemyForWave(freshCurrentWave);
-        const timer = waveManager.calculateWaveTimer(freshCurrentWave);
-        state.setCurrentEnemy(enemy);
-        state.updateCombatStats({waveTimer: timer, waveTimerMax: timer});
-        state.setCombatActive(true);
-      }
+  // Game tick callbacks
+  const handleWaveComplete = useCallback(
+    (reward: number, isBoss: boolean) => {
+      setVictoryWasBoss(isBoss);
+      setShowVictoryFlash(true);
+      spawnResourcePopup(reward, 'scrap', SCREEN_WIDTH / 2 - 50, 180);
     },
-    [
-      productionSystem,
-      combatSystem,
-      waveManager,
-      prestigeSystem,
-      applyDropReward,
-      spawnResourcePopup,
-    ],
+    [spawnResourcePopup],
   );
 
-  // Start game loop
-  useGameLoop({onTick: handleTick, tickRate: 100});
+  const handleWaveFailed = useCallback(() => {
+    // Wave failed - timer ran out
+  }, []);
+
+  // Start game loop with extracted tick logic
+  useGameTick({
+    productionSystem,
+    combatSystem,
+    waveManager,
+    prestigeSystem,
+    onWaveComplete: handleWaveComplete,
+    onWaveFailed: handleWaveFailed,
+    onLuckyDrop: applyDropReward,
+    tickRate: 100,
+  });
 
   // Auto-save
   useEffect(() => {
@@ -429,14 +336,14 @@ export const GameScreen: React.FC = () => {
       const baseTapDamage = 10 + trainingBonus;
       const tapTierMultiplier = PRESTIGE_TIERS[player.buildingTier]?.multiplier ?? 1;
 
+      const debugTapDamageMultiplier = DEBUG_CONFIG.ENABLED ? DEBUG_CONFIG.DAMAGE_MULTIPLIER : 1;
       const tapDamage = combatSystem.calculateTapDamage(baseTapDamage, {
         prestigeAutoDamage: prestigeBonuses.autoDamageMultiplier,
-        prestigeTapPower: prestigeBonuses.tapPowerMultiplier,
+        prestigeTapPower: prestigeBonuses.tapPowerMultiplier * debugTapDamageMultiplier,
         prestigeBurstChance: prestigeBonuses.burstChanceBonus,
         prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
         boostMultiplier: 1,
         tierMultiplier: tapTierMultiplier,
-        synergyDamageMultiplier: 1,
       });
 
       const burst = combatSystem.checkBurstAttack(
@@ -449,12 +356,22 @@ export const GameScreen: React.FC = () => {
           prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
           boostMultiplier: 1,
           tierMultiplier: tapTierMultiplier,
-          synergyDamageMultiplier: 1,
         },
       );
 
       const finalDamage = tapDamage * burst.multiplier;
       damageEnemy(finalDamage);
+
+      // Calculate scrap from tap damage
+      const debugScrapMultiplier = DEBUG_CONFIG.ENABLED ? DEBUG_CONFIG.SCRAP_MULTIPLIER : 1;
+      const tapScrap = combatSystem.calculateScrapFromDamage(
+        finalDamage,
+        combat.currentEnemy,
+        prestigeBonuses.waveRewardsMultiplier * debugScrapMultiplier,
+      );
+      if (tapScrap > 0) {
+        addScrap(tapScrap);
+      }
 
       // Spawn damage popup at tap location or default enemy area
       const x = tapX ?? enemyAreaRef.current.x + (Math.random() - 0.5) * 60;
@@ -466,7 +383,7 @@ export const GameScreen: React.FC = () => {
         spawnTapRipple(tapX, tapY);
       }
     },
-    [combat, combatSystem, buildings, prestigeBonuses, damageEnemy, spawnPopup, spawnTapRipple, player.buildingTier],
+    [combat, combatSystem, buildings, prestigeBonuses, damageEnemy, spawnPopup, spawnTapRipple, player.buildingTier, addScrap],
   );
 
   // Handle builder assignment (directly through store since it has validation)
@@ -640,6 +557,7 @@ export const GameScreen: React.FC = () => {
                 currentWave={currentWave}
                 evolutionTier={building.evolutionTier}
                 nextEvolutionWave={nextTier?.unlockWave}
+                noWorkers={evolvableBuilding.noWorkers}
               />
             );
           })}

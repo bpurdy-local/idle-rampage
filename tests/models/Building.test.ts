@@ -115,12 +115,6 @@ describe('Building Model', () => {
       const prodWithBonus = calculateProduction(mockBuildingType, 1, 1, 1, 1.5);
       expect(prodWithBonus).toBe(prodNoBonus * 1.5);
     });
-
-    it('applies synergy bonus', () => {
-      const prodNoBonus = calculateProduction(mockBuildingType, 1, 1, 1, 1, true, 0);
-      const prodWithBonus = calculateProduction(mockBuildingType, 1, 1, 1, 1, true, 0.25);
-      expect(prodWithBonus).toBe(prodNoBonus * 1.25);
-    });
   });
 });
 

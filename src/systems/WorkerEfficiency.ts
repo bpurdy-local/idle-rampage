@@ -97,15 +97,6 @@ export function getNextMilestone(
 }
 
 /**
- * Get all achieved milestones for a building.
- */
-export function getAchievedMilestones(
-  assignedWorkers: number,
-): {threshold: number; bonus: number; name: string}[] {
-  return WORKER_MILESTONES.filter(m => assignedWorkers >= m.threshold);
-}
-
-/**
  * Calculate complete worker efficiency breakdown.
  * This is the main function to use when calculating building output.
  *
@@ -142,62 +133,4 @@ export function calculateWorkerEfficiency(
     milestoneBonus,
     effectiveWorkers,
   };
-}
-
-/**
- * Format efficiency as a percentage string for display.
- */
-export function formatEfficiency(efficiency: number): string {
-  return `${Math.round(efficiency * 100)}%`;
-}
-
-/**
- * Calculate the marginal efficiency of adding one more worker.
- * Useful for showing players the value of their next worker assignment.
- */
-export function calculateMarginalEfficiency(
-  currentWorkers: number,
-): {efficiency: number; triggersMilestone: boolean; milestoneName?: string} {
-  const nextWorkerPosition = currentWorkers + 1;
-  const efficiency = calculateSingleWorkerEfficiency(nextWorkerPosition);
-
-  // Check if adding this worker triggers a milestone
-  const currentMilestoneBonus = calculateMilestoneBonus(currentWorkers);
-  const nextMilestoneBonus = calculateMilestoneBonus(nextWorkerPosition);
-  const triggersMilestone = nextMilestoneBonus > currentMilestoneBonus;
-
-  const milestone = WORKER_MILESTONES.find(m => m.threshold === nextWorkerPosition);
-
-  return {
-    efficiency,
-    triggersMilestone,
-    milestoneName: milestone?.name,
-  };
-}
-
-/**
- * Calculate optimal worker distribution across buildings.
- * This helps with AI suggestions or auto-assign features.
- *
- * Returns suggested worker counts for each building to maximize total output.
- */
-export function suggestOptimalDistribution(
-  totalWorkers: number,
-  buildingCount: number,
-): number[] {
-  if (buildingCount <= 0) return [];
-  if (totalWorkers <= 0) return new Array(buildingCount).fill(0);
-
-  // Start with even distribution
-  const basePerBuilding = Math.floor(totalWorkers / buildingCount);
-  const remainder = totalWorkers % buildingCount;
-
-  const distribution = new Array(buildingCount).fill(basePerBuilding);
-
-  // Distribute remainder to first buildings
-  for (let i = 0; i < remainder; i++) {
-    distribution[i]++;
-  }
-
-  return distribution;
 }

@@ -29,6 +29,8 @@ interface BuildingCardProps {
   currentWave: number;
   evolutionTier: number;
   nextEvolutionWave?: number;
+  /** If true, this building doesn't use workers (static effect building) */
+  noWorkers?: boolean;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -48,9 +50,10 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   currentWave,
   evolutionTier,
   nextEvolutionWave,
+  noWorkers = false,
 }) => {
-  const canAssign = availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
-  const canUnassign = building.assignedBuilders > 0;
+  const canAssign = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
+  const canUnassign = !noWorkers && building.assignedBuilders > 0;
 
   // Get tiered building name and color based on prestige
   const tieredName = getTieredBuildingName(buildingType.name, prestigeCount);
@@ -203,12 +206,19 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
       </View>
 
       <View style={styles.stats}>
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>Builders</Text>
-          <Text style={styles.statValue}>
-            {building.assignedBuilders}/{buildingType.maxBuilders}
-          </Text>
-        </View>
+        {noWorkers ? (
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>Effect</Text>
+            <Text style={styles.statValue}>Static Bonus</Text>
+          </View>
+        ) : (
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>Builders</Text>
+            <Text style={styles.statValue}>
+              {building.assignedBuilders}/{buildingType.maxBuilders}
+            </Text>
+          </View>
+        )}
         <View style={styles.stat}>
           <Text style={styles.statLabel}>Output</Text>
           <Text style={styles.statValue}>{formatNumber(production)}/s</Text>
@@ -227,22 +237,24 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
       )}
 
       <View style={styles.actions}>
-        <View style={styles.builderActions}>
-          <AnimatedPressable
-            style={[styles.builderBtn, !canUnassign && styles.btnDisabled, minusBtnStyle]}
-            {...createHoldablePressHandler(minusBtnScale, onUnassignBuilder, () => canUnassignRef.current)}>
-            <Text style={styles.builderBtnText}>-</Text>
-          </AnimatedPressable>
-          <Text style={styles.builderCount}>👷 {building.assignedBuilders}</Text>
-          <AnimatedPressable
-            style={[styles.builderBtn, !canAssign && styles.btnDisabled, plusBtnStyle]}
-            {...createHoldablePressHandler(plusBtnScale, onAssignBuilder, () => canAssignRef.current)}>
-            <Text style={styles.builderBtnText}>+</Text>
-          </AnimatedPressable>
-        </View>
+        {!noWorkers && (
+          <View style={styles.builderActions}>
+            <AnimatedPressable
+              style={[styles.builderBtn, !canUnassign && styles.btnDisabled, minusBtnStyle]}
+              {...createHoldablePressHandler(minusBtnScale, onUnassignBuilder, () => canUnassignRef.current)}>
+              <Text style={styles.builderBtnText}>-</Text>
+            </AnimatedPressable>
+            <Text style={styles.builderCount}>👷 {building.assignedBuilders}</Text>
+            <AnimatedPressable
+              style={[styles.builderBtn, !canAssign && styles.btnDisabled, plusBtnStyle]}
+              {...createHoldablePressHandler(plusBtnScale, onAssignBuilder, () => canAssignRef.current)}>
+              <Text style={styles.builderBtnText}>+</Text>
+            </AnimatedPressable>
+          </View>
+        )}
 
         <AnimatedPressable
-          style={[styles.upgradeBtn, !canAffordUpgrade && styles.btnDisabled, upgradeBtnStyle]}
+          style={[styles.upgradeBtn, !canAffordUpgrade && styles.btnDisabled, noWorkers && styles.upgradeBtnWide, upgradeBtnStyle]}
           {...createHoldablePressHandler(upgradeBtnScale, onUpgrade, () => canAffordUpgradeRef.current)}>
           <Text style={styles.upgradeBtnText}>
             Upgrade ({formatNumber(upgradeCost)})
@@ -385,6 +397,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 6,
+  },
+  upgradeBtnWide: {
+    flex: 1,
+    alignItems: 'center',
   },
   upgradeBtnText: {
     color: '#fff',

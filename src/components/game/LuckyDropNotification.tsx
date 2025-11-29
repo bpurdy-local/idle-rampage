@@ -79,9 +79,6 @@ export const LuckyDropNotification: React.FC<LuckyDropNotificationProps> = ({
     if (drop.type === 'boost') {
       return `2x Boost (${drop.boostDuration}s)`;
     }
-    if (drop.type === 'builder') {
-      return '+1 Builder';
-    }
     return `+${amount}`;
   };
 

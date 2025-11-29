@@ -48,6 +48,10 @@ export class ProductionSystem {
     return 1 + logBonus + linearBonus + milestoneBonus;
   }
 
+  /**
+   * Calculate Command Center bonus.
+   * This is a static effect that scales with building level (no workers needed).
+   */
   calculateCommandCenterBonus(buildings: BuildingState[]): number {
     const commandCenter = buildings.find(b => b.typeId === 'command_center');
     if (!commandCenter || !commandCenter.isUnlocked) return 1;
@@ -59,15 +63,13 @@ export class ProductionSystem {
     const tier = evolvableBuilding.tiers[commandCenter.evolutionTier - 1];
     if (!tier) return 1;
 
-    const buildingType = toBuildingType(evolvableBuilding, tier);
+    // Static effect: baseProduction + 2% per level above 1
+    // e.g., Tier 1 at level 5: 15% + (4 * 2%) = 23%
+    const baseBonus = tier.baseProduction;
+    const levelBonus = (commandCenter.level - 1) * 0.02;
+    const totalBonus = baseBonus + levelBonus;
 
-    // Uses passive baseline (1 worker equivalent) plus assigned workers
-    const baseBonus = calculateProduction(
-      buildingType,
-      commandCenter.level,
-      commandCenter.assignedBuilders,
-    );
-    return 1 + baseBonus;
+    return 1 + totalBonus;
   }
 
   calculateBuildingProduction(

@@ -25,6 +25,8 @@ export interface EvolvableBuilding {
   costMultiplier: number;
   maxBuilders: number;
   tiers: BuildingEvolutionTier[];
+  /** If true, this building doesn't use workers and has static level-based effects */
+  noWorkers?: boolean;
 }
 
 /**
@@ -91,7 +93,6 @@ export const calculateUpgradeCost = (
  * @param waveBonus - Wave-based bonus multiplier (default 1)
  * @param prestigeBonus - Prestige bonus multiplier (default 1)
  * @param includePassive - Whether to include passive baseline (default true)
- * @param synergyBonus - Additional multiplier from synergies (default 0, additive)
  */
 export const calculateProduction = (
   buildingType: BuildingType,
@@ -100,7 +101,6 @@ export const calculateProduction = (
   waveBonus: number = 1,
   prestigeBonus: number = 1,
   includePassive: boolean = true,
-  synergyBonus: number = 0,
 ): number => {
   const baseOutput = buildingType.baseProduction;
   // Improved level scaling: +75% per level (was +50%)
@@ -112,10 +112,7 @@ export const calculateProduction = (
 
   if (effectiveWorkers === 0) return 0;
 
-  // Apply synergy bonus as additive multiplier
-  const synergyMultiplier = 1 + synergyBonus;
-
-  return baseOutput * levelMultiplier * effectiveWorkers * waveBonus * prestigeBonus * synergyMultiplier;
+  return baseOutput * levelMultiplier * effectiveWorkers * waveBonus * prestigeBonus;
 };
 
 /**
@@ -127,7 +124,6 @@ export const getProductionBreakdown = (
   assignedBuilders: number,
   waveBonus: number = 1,
   prestigeBonus: number = 1,
-  synergyBonus: number = 0,
 ): {
   baseProduction: number;
   levelMultiplier: number;
@@ -136,7 +132,6 @@ export const getProductionBreakdown = (
   milestoneBonus: number;
   waveBonus: number;
   prestigeBonus: number;
-  synergyBonus: number;
   totalProduction: number;
 } => {
   const baseOutput = buildingType.baseProduction;
@@ -151,15 +146,12 @@ export const getProductionBreakdown = (
     milestoneBonus: efficiency.milestoneBonus,
     waveBonus,
     prestigeBonus,
-    synergyBonus,
     totalProduction: calculateProduction(
       buildingType,
       level,
       assignedBuilders,
       waveBonus,
       prestigeBonus,
-      true,
-      synergyBonus,
     ),
   };
 };

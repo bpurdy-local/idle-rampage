@@ -1,5 +1,5 @@
 import {BuildingState} from '../core/GameState';
-import {getBuildingTypeById} from '../data/buildings';
+import {getEvolvableBuildingById} from '../data/buildings';
 
 export interface BuilderAssignmentResult {
   success: boolean;
@@ -74,8 +74,18 @@ export class BuilderManager {
       };
     }
 
-    const buildingType = getBuildingTypeById(building.typeId);
-    if (buildingType && building.assignedBuilders >= buildingType.maxBuilders) {
+    const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+
+    // Check if building doesn't use workers (static effect building)
+    if (evolvableBuilding?.noWorkers) {
+      return {
+        success: false,
+        message: 'This building has a static effect and does not use workers',
+        newAvailableBuilders: this.availableBuilders,
+      };
+    }
+
+    if (evolvableBuilding && building.assignedBuilders >= evolvableBuilding.maxBuilders) {
       return {
         success: false,
         message: 'Building at max capacity',

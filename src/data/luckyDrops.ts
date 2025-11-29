@@ -1,4 +1,4 @@
-export type DropType = 'scrap' | 'blueprints' | 'boost' | 'builder';
+export type DropType = 'scrap' | 'blueprints' | 'boost';
 export type DropRarity = 'common' | 'uncommon' | 'rare' | 'epic';
 
 export interface LuckyDrop {
@@ -43,15 +43,6 @@ export const LUCKY_DROPS: LuckyDrop[] = [
     boostType: 'all',
     boostDuration: 30,
   },
-  {
-    id: 'builder_drop',
-    name: 'Builder',
-    type: 'builder',
-    rarity: 'epic',
-    weight: 5,
-    minAmount: 1,
-    maxAmount: 1,
-  },
 ];
 
 export const DROP_CONFIG = {
@@ -70,5 +61,4 @@ export const DROP_ICONS: Record<DropType, string> = {
   scrap: '⚙️',
   blueprints: '📘',
   boost: '⚡',
-  builder: '👷',
 };
