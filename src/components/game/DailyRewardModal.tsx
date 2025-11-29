@@ -2,13 +2,14 @@ import React from 'react';
 import {View, Text, StyleSheet, SafeAreaView} from 'react-native';
 import {Card} from '../common/Card';
 import {Button} from '../common/Button';
-import {DailyRewardDefinition} from '../../data/dailyRewards';
+import {DailyRewardDefinition, getScaledRewardAmount} from '../../data/dailyRewards';
 import {formatNumber} from '../../utils/formatters';
 
 interface DailyRewardModalProps {
   reward: DailyRewardDefinition;
   streak: number;
   isStreakBroken: boolean;
+  currentWave: number;
   onClaim: () => void;
 }
 
@@ -42,9 +43,11 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({
   reward,
   streak,
   isStreakBroken,
+  currentWave,
   onClaim,
 }) => {
   const cycleDay = ((streak - 1) % 7) + 1;
+  const scaledAmount = getScaledRewardAmount(reward, currentWave);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -62,7 +65,7 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({
             <Text style={styles.rewardIcon}>{getRewardIcon(reward.type)}</Text>
             <Text
               style={[styles.rewardAmount, {color: getRewardColor(reward.type)}]}>
-              +{formatNumber(reward.amount)}
+              +{formatNumber(scaledAmount)}
             </Text>
             <Text style={styles.rewardType}>
               {reward.type.charAt(0).toUpperCase() + reward.type.slice(1)}

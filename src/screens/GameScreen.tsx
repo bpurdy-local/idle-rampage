@@ -32,8 +32,10 @@ import {
   MilestonePopup,
   BuildingEvolutionPopup,
   SettingsModal,
+  ScavengersDepot,
 } from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
+import {getScaledRewardAmount} from '../data/dailyRewards';
 import {luckyDropSystem, DropResult} from '../systems/LuckyDropSystem';
 import {BoostState} from '../core/GameState';
 import {eventBus, GameEvents} from '../core/EventBus';
@@ -80,6 +82,7 @@ export const GameScreen: React.FC = () => {
     newTier: BuildingEvolutionTier;
   } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showShop, setShowShop] = useState(false);
   const lastTapTimeRef = useRef<number>(0);
   const enemyAreaRef = useRef<{x: number; y: number}>({x: 200, y: 250});
   const hasCheckedOfflineEarnings = useRef(false);
@@ -388,16 +391,17 @@ export const GameScreen: React.FC = () => {
     if (!pendingReward || !pendingReward.reward) return;
 
     const {reward, newStreak} = pendingReward;
+    const scaledAmount = getScaledRewardAmount(reward, currentWave);
 
     switch (reward.type) {
       case 'scrap':
-        addScrap(reward.amount);
+        addScrap(scaledAmount);
         break;
       case 'blueprints':
-        addBlueprints(reward.amount);
+        addBlueprints(scaledAmount);
         break;
       case 'builders':
-        addBuilders(reward.amount);
+        addBuilders(scaledAmount);
         break;
     }
 
@@ -406,7 +410,7 @@ export const GameScreen: React.FC = () => {
 
     setShowDailyReward(false);
     setPendingReward(null);
-  }, [pendingReward, dailyRewards, addScrap, addBlueprints, addBuilders, updateDailyRewards]);
+  }, [pendingReward, dailyRewards, currentWave, addScrap, addBlueprints, addBuilders, updateDailyRewards]);
 
   // Handle tap attack
   const handleTap = useCallback(
@@ -586,6 +590,9 @@ export const GameScreen: React.FC = () => {
         <TouchableOpacity style={styles.tab}>
           <Text style={styles.tabTextActive}>Buildings</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.tab} onPress={() => setShowShop(true)}>
+          <Text style={styles.shopTabText}>Depot</Text>
+        </TouchableOpacity>
         <PrestigeTabGlow
           canPrestige={prestigePreview.canPrestige}
           onPress={() => setShowPrestige(true)}
@@ -605,11 +612,12 @@ export const GameScreen: React.FC = () => {
             const buildingType = toBuildingType(evolvableBuilding, tier);
             const nextTier = getNextEvolutionTier(evolvableBuilding, currentWave);
 
+            const waveBonus = productionSystem.calculateWaveBonus(currentWave);
             const production = calculateProduction(
               buildingType,
               building.level,
               building.assignedBuilders,
-              1,
+              waveBonus,
               prestigeBonuses.productionMultiplier,
             );
 
@@ -667,6 +675,7 @@ export const GameScreen: React.FC = () => {
             reward={pendingReward.reward}
             streak={pendingReward.newStreak}
             isStreakBroken={pendingReward.isStreakBroken}
+            currentWave={currentWave}
             onClaim={handleClaimDailyReward}
           />
         )}
@@ -708,6 +717,19 @@ export const GameScreen: React.FC = () => {
         onClose={() => setShowSettings(false)}
         buildings={buildings}
       />
+
+      <Modal visible={showShop} animationType="slide">
+        <ScavengersDepot
+          onClose={() => setShowShop(false)}
+          onPurchase={(productId) => {
+            // TODO: Integrate with IAPService for real purchases
+            console.log('Purchase requested:', productId);
+            setShowShop(false);
+          }}
+          currentBuilders={player.builders.total}
+          maxBuilders={player.builders.maxBuilders}
+        />
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -734,6 +756,11 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  shopTabText: {
+    color: '#FFD700',
     fontSize: 14,
     fontWeight: '600',
   },

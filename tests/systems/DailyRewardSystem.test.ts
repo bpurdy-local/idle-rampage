@@ -1,6 +1,6 @@
 import {DailyRewardSystem} from '../../src/systems/DailyRewardSystem';
 import {DailyRewardState} from '../../src/core/GameState';
-import {DAILY_REWARDS, getRewardForDay} from '../../src/data/dailyRewards';
+import {DAILY_REWARDS, getRewardForDay, getScaledRewardAmount, calculateWaveScaling} from '../../src/data/dailyRewards';
 
 const createMockDailyRewardState = (
   overrides: Partial<DailyRewardState> = {},
@@ -155,14 +155,14 @@ describe('getRewardForDay', () => {
     const reward = getRewardForDay(1);
     expect(reward.day).toBe(1);
     expect(reward.type).toBe('scrap');
-    expect(reward.amount).toBe(100);
+    expect(reward.baseAmount).toBe(1000);
   });
 
   it('returns correct reward for day 7', () => {
     const reward = getRewardForDay(7);
     expect(reward.day).toBe(7);
     expect(reward.type).toBe('builders');
-    expect(reward.amount).toBe(1);
+    expect(reward.baseAmount).toBe(1);
   });
 
   it('cycles correctly for streaks beyond 7', () => {
@@ -170,6 +170,32 @@ describe('getRewardForDay', () => {
     expect(getRewardForDay(14).day).toBe(7);
     expect(getRewardForDay(15).day).toBe(1);
     expect(getRewardForDay(21).day).toBe(7);
+  });
+});
+
+describe('Wave Scaling', () => {
+  it('returns 1 for wave 1', () => {
+    expect(calculateWaveScaling(1)).toBe(1);
+  });
+
+  it('increases with higher waves', () => {
+    const wave1 = calculateWaveScaling(1);
+    const wave10 = calculateWaveScaling(10);
+    const wave50 = calculateWaveScaling(50);
+
+    expect(wave10).toBeGreaterThan(wave1);
+    expect(wave50).toBeGreaterThan(wave10);
+  });
+
+  it('scales scrap rewards but not other types', () => {
+    const scrapReward = getRewardForDay(1); // scrap reward
+    const builderReward = getRewardForDay(7); // builder reward
+
+    const scaledScrap = getScaledRewardAmount(scrapReward, 50);
+    const scaledBuilder = getScaledRewardAmount(builderReward, 50);
+
+    expect(scaledScrap).toBeGreaterThan(scrapReward.baseAmount);
+    expect(scaledBuilder).toBe(builderReward.baseAmount); // builders not scaled
   });
 });
 
@@ -194,7 +220,7 @@ describe('DAILY_REWARDS data', () => {
     for (const reward of DAILY_REWARDS) {
       expect(reward.day).toBeGreaterThan(0);
       expect(reward.type).toBeDefined();
-      expect(reward.amount).toBeGreaterThan(0);
+      expect(reward.baseAmount).toBeGreaterThan(0);
       expect(reward.description).toBeDefined();
     }
   });

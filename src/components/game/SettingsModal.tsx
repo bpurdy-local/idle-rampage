@@ -41,6 +41,12 @@ const STORY_ENTRIES: StoryEntry[] = [
     story: 'Your operation grows more sophisticated. The Recycler processes raw scrap into refined materials, recovering valuable alloys that would otherwise be lost. Your workers have learned to extract more from less - a crucial skill in this resource-scarce world.',
   },
   {
+    buildingId: 'salvage_yard',
+    tier: 1,
+    title: 'The Scavengers Arrive',
+    story: 'Word of your settlement spreads across the wasteland. One morning, a caravan of armored vehicles arrives at your gates - the Scavengers.\n\nThey\'re nomadic traders who brave machine-infested territories, salvaging pre-war technology and rescuing stranded survivors. Their leader offers a deal: they\'ll establish a trading post here, a "Scavenger\'s Depot," in exchange for protection.\n\nThe Depot becomes your lifeline to the wider world, offering rare resources and recruiting survivors to join your cause. Visit the golden "Depot" tab to see what they have for trade.',
+  },
+  {
     buildingId: 'scrap_works',
     tier: 3,
     title: 'The Refinery',
