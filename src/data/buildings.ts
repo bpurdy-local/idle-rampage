@@ -195,9 +195,9 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 1,
         name: 'Outpost',
-        description: '5% boost to all production',
+        description: '10% boost to all production',
         unlockWave: 25,
-        baseProduction: 0.05,
+        baseProduction: 0.10, // Doubled from 0.05 for stronger early impact
         baseCost: 5000,
         iconName: 'flag',
         color: '#708090',
@@ -205,9 +205,9 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 2,
         name: 'Command Center',
-        description: '10% boost to all production',
+        description: '20% boost to all production',
         unlockWave: 50,
-        baseProduction: 0.1,
+        baseProduction: 0.20, // Doubled from 0.1
         baseCost: 50000,
         iconName: 'broadcast-tower',
         color: '#FFD700',
@@ -215,9 +215,9 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 3,
         name: 'War Room',
-        description: '15% boost to all production',
+        description: '30% boost to all production',
         unlockWave: 75,
-        baseProduction: 0.15,
+        baseProduction: 0.30, // Doubled from 0.15
         baseCost: 500000,
         iconName: 'chess-rook',
         color: '#E6E6FA',
@@ -225,9 +225,9 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 4,
         name: 'Citadel',
-        description: '20% boost to all production and combat',
+        description: '40% boost to all production and combat',
         unlockWave: 95,
-        baseProduction: 0.2,
+        baseProduction: 0.40, // Doubled from 0.2
         baseCost: 5000000,
         iconName: 'crown',
         color: '#FF4500',

@@ -219,6 +219,7 @@ export const GameScreen: React.FC = () => {
             prestigeBurstDamage: freshPrestigeBonuses.burstDamageMultiplier,
             boostMultiplier: 1,
             tierMultiplier,
+            synergyDamageMultiplier: 1,
           },
           deltaMs,
         );
@@ -431,6 +432,7 @@ export const GameScreen: React.FC = () => {
         prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
         boostMultiplier: 1,
         tierMultiplier: tapTierMultiplier,
+        synergyDamageMultiplier: 1,
       });
 
       const burst = combatSystem.checkBurstAttack(
@@ -443,6 +445,7 @@ export const GameScreen: React.FC = () => {
           prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
           boostMultiplier: 1,
           tierMultiplier: tapTierMultiplier,
+          synergyDamageMultiplier: 1,
         },
       );
 

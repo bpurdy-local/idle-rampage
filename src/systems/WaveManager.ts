@@ -22,9 +22,9 @@ export class WaveManager {
 
   constructor(config?: Partial<WaveConfig>) {
     this.config = {
-      baseTimerSeconds: 30,
+      baseTimerSeconds: 15,
       timerBonusPerWave: 0.1,
-      maxTimerSeconds: 60,
+      maxTimerSeconds: 45,
       ...config,
     };
   }
@@ -81,11 +81,12 @@ export class WaveManager {
     // Additional wave completion multiplier (50% per 10 waves, capped at 10x)
     const waveMultiplier = Math.min(10, 1 + Math.floor(wave / 10) * 0.5);
 
-    const bonusScrap = Math.floor(
-      waveBonus * waveMultiplier * prestigeRewardBonus * boostMultiplier,
-    );
+    // Calculate bonus scrap from wave completion (wave bonus * wave multiplier)
+    const bonusScrap = Math.floor(waveBonus * waveMultiplier);
+
+    // Apply prestige and boost multipliers only once to the total
     const totalScrap = Math.floor(
-      (baseScrap + bonusScrap) * waveMultiplier * prestigeRewardBonus * boostMultiplier,
+      (baseScrap + bonusScrap) * prestigeRewardBonus * boostMultiplier,
     );
 
     return {

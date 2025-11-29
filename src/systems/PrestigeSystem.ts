@@ -19,24 +19,29 @@ export interface PrestigeResetResult {
 }
 
 export class PrestigeSystem {
-  private readonly BASE_BLUEPRINT_WAVE = 10;
-  private readonly BLUEPRINTS_PER_WAVE = 1;
-  private readonly WAVE_SCALING = 1.1;
+  private readonly BASE_BLUEPRINT_WAVE = 100;
+  private readonly BASE_BLUEPRINTS = 50; // Base reward for reaching wave 100
+  private readonly BLUEPRINTS_PER_WAVE = 5; // Blueprints per wave above 100
+  private readonly WAVE_SCALING = 1.08; // Moderate scaling to prevent extreme late-game rewards
 
   /**
    * Calculate blueprints earned based on wave reached
+   * Much more generous since wave 100 is much harder to reach than wave 10
    */
   calculateBlueprintsEarned(waveReached: number): number {
     if (waveReached < this.BASE_BLUEPRINT_WAVE) {
       return 0;
     }
 
-    const wavesAboveBase = waveReached - this.BASE_BLUEPRINT_WAVE;
-    let blueprints = 0;
+    // Base reward for reaching wave 100
+    let blueprints = this.BASE_BLUEPRINTS;
 
-    for (let i = 0; i <= wavesAboveBase; i++) {
+    // Additional blueprints for waves beyond 100
+    const wavesAboveBase = waveReached - this.BASE_BLUEPRINT_WAVE;
+
+    for (let i = 1; i <= wavesAboveBase; i++) {
       blueprints += Math.floor(
-        this.BLUEPRINTS_PER_WAVE * Math.pow(this.WAVE_SCALING, i),
+        this.BLUEPRINTS_PER_WAVE * Math.pow(this.WAVE_SCALING, i - 1),
       );
     }
 

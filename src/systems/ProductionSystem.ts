@@ -26,8 +26,26 @@ export interface ProductionBonuses {
 }
 
 export class ProductionSystem {
+  /**
+   * Calculate wave-based efficiency bonus for buildings
+   * Higher waves = more efficient buildings
+   * This provides a significant boost as you progress through waves
+   */
   calculateWaveBonus(currentWave: number): number {
-    return 1 + Math.log10(currentWave + 1) * 0.5;
+    // Base bonus: logarithmic scaling for early game smoothness
+    const logBonus = Math.log10(currentWave + 1) * 0.5;
+
+    // Linear bonus: 2% per wave for consistent growth
+    const linearBonus = currentWave * 0.02;
+
+    // Milestone bonuses: extra boost at key wave thresholds
+    let milestoneBonus = 0;
+    if (currentWave >= 25) milestoneBonus += 0.25;
+    if (currentWave >= 50) milestoneBonus += 0.5;
+    if (currentWave >= 75) milestoneBonus += 0.75;
+    if (currentWave >= 100) milestoneBonus += 1.0;
+
+    return 1 + logBonus + linearBonus + milestoneBonus;
   }
 
   calculateCommandCenterBonus(buildings: BuildingState[]): number {

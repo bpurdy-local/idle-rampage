@@ -1,3 +1,5 @@
+import {calculateWorkerEfficiency} from '../systems/WorkerEfficiency';
+
 export type BuildingRole = 'production' | 'combat' | 'utility';
 
 /**
@@ -73,9 +75,15 @@ export const calculateUpgradeCost = (
 };
 
 /**
- * Calculate building production/effect.
- * All unlocked buildings provide a passive baseline effect (equivalent to 1 worker).
- * Assigned workers add on top of this baseline.
+ * Calculate building production/effect with diminishing worker efficiency.
+ *
+ * Workers have diminishing returns - the more you assign, the less efficient each one is.
+ * This encourages spreading workers across buildings rather than concentrating on one.
+ *
+ * Features:
+ * - Passive baseline: All buildings provide 1 effective worker equivalent
+ * - Diminishing returns: Each additional worker is less efficient
+ * - Milestone bonuses: Bonuses at 5, 10, 20 workers to create breakpoints
  *
  * @param buildingType - The building type definition
  * @param level - Current building level
@@ -83,6 +91,7 @@ export const calculateUpgradeCost = (
  * @param waveBonus - Wave-based bonus multiplier (default 1)
  * @param prestigeBonus - Prestige bonus multiplier (default 1)
  * @param includePassive - Whether to include passive baseline (default true)
+ * @param synergyBonus - Additional multiplier from synergies (default 0, additive)
  */
 export const calculateProduction = (
   buildingType: BuildingType,
@@ -91,14 +100,66 @@ export const calculateProduction = (
   waveBonus: number = 1,
   prestigeBonus: number = 1,
   includePassive: boolean = true,
+  synergyBonus: number = 0,
 ): number => {
   const baseOutput = buildingType.baseProduction;
-  const levelMultiplier = 1 + (level - 1) * 0.5;
+  // Improved level scaling: +75% per level (was +50%)
+  const levelMultiplier = 1 + (level - 1) * 0.75;
 
-  // Passive baseline = 1 worker equivalent, plus any assigned workers
-  const effectiveWorkers = includePassive ? 1 + assignedBuilders : assignedBuilders;
+  // Calculate effective workers with diminishing returns and milestone bonuses
+  const efficiency = calculateWorkerEfficiency(assignedBuilders, includePassive);
+  const effectiveWorkers = efficiency.effectiveWorkers;
 
   if (effectiveWorkers === 0) return 0;
 
-  return baseOutput * levelMultiplier * effectiveWorkers * waveBonus * prestigeBonus;
+  // Apply synergy bonus as additive multiplier
+  const synergyMultiplier = 1 + synergyBonus;
+
+  return baseOutput * levelMultiplier * effectiveWorkers * waveBonus * prestigeBonus * synergyMultiplier;
+};
+
+/**
+ * Get detailed production breakdown for UI display.
+ */
+export const getProductionBreakdown = (
+  buildingType: BuildingType,
+  level: number,
+  assignedBuilders: number,
+  waveBonus: number = 1,
+  prestigeBonus: number = 1,
+  synergyBonus: number = 0,
+): {
+  baseProduction: number;
+  levelMultiplier: number;
+  effectiveWorkers: number;
+  workerEfficiency: number;
+  milestoneBonus: number;
+  waveBonus: number;
+  prestigeBonus: number;
+  synergyBonus: number;
+  totalProduction: number;
+} => {
+  const baseOutput = buildingType.baseProduction;
+  const levelMultiplier = 1 + (level - 1) * 0.75;
+  const efficiency = calculateWorkerEfficiency(assignedBuilders, true);
+
+  return {
+    baseProduction: baseOutput,
+    levelMultiplier,
+    effectiveWorkers: efficiency.effectiveWorkers,
+    workerEfficiency: efficiency.averageEfficiency,
+    milestoneBonus: efficiency.milestoneBonus,
+    waveBonus,
+    prestigeBonus,
+    synergyBonus,
+    totalProduction: calculateProduction(
+      buildingType,
+      level,
+      assignedBuilders,
+      waveBonus,
+      prestigeBonus,
+      true,
+      synergyBonus,
+    ),
+  };
 };

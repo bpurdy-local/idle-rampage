@@ -30,55 +30,55 @@ describe('PrestigeSystem', () => {
 
   describe('calculateBlueprintsEarned', () => {
     it('returns 0 for waves below requirement', () => {
-      expect(system.calculateBlueprintsEarned(5)).toBe(0);
-      expect(system.calculateBlueprintsEarned(9)).toBe(0);
+      expect(system.calculateBlueprintsEarned(50)).toBe(0);
+      expect(system.calculateBlueprintsEarned(99)).toBe(0);
     });
 
-    it('returns blueprints starting at wave 10', () => {
-      const blueprints = system.calculateBlueprintsEarned(10);
+    it('returns blueprints starting at wave 100', () => {
+      const blueprints = system.calculateBlueprintsEarned(100);
       expect(blueprints).toBeGreaterThan(0);
     });
 
     it('increases blueprints with higher waves', () => {
-      const bp10 = system.calculateBlueprintsEarned(10);
-      const bp20 = system.calculateBlueprintsEarned(20);
-      const bp50 = system.calculateBlueprintsEarned(50);
+      const bp100 = system.calculateBlueprintsEarned(100);
+      const bp120 = system.calculateBlueprintsEarned(120);
+      const bp150 = system.calculateBlueprintsEarned(150);
 
-      expect(bp20).toBeGreaterThan(bp10);
-      expect(bp50).toBeGreaterThan(bp20);
+      expect(bp120).toBeGreaterThan(bp100);
+      expect(bp150).toBeGreaterThan(bp120);
     });
   });
 
   describe('canPrestige', () => {
     it('returns false for low waves', () => {
-      expect(system.canPrestige(5)).toBe(false);
-      expect(system.canPrestige(9)).toBe(false);
+      expect(system.canPrestige(50)).toBe(false);
+      expect(system.canPrestige(99)).toBe(false);
     });
 
     it('returns true at minimum wave', () => {
-      expect(system.canPrestige(10)).toBe(true);
+      expect(system.canPrestige(100)).toBe(true);
     });
 
     it('returns true for higher waves', () => {
-      expect(system.canPrestige(50)).toBe(true);
+      expect(system.canPrestige(150)).toBe(true);
     });
   });
 
   describe('getPrestigeRequirement', () => {
     it('returns minimum wave requirement', () => {
-      expect(system.getPrestigeRequirement()).toBe(10);
+      expect(system.getPrestigeRequirement()).toBe(100);
     });
   });
 
   describe('previewPrestige', () => {
     it('shows can prestige false for low waves', () => {
-      const preview = system.previewPrestige(5);
+      const preview = system.previewPrestige(50);
       expect(preview.canPrestige).toBe(false);
       expect(preview.blueprintsEarned).toBe(0);
     });
 
     it('shows accurate preview for valid waves', () => {
-      const preview = system.previewPrestige(25);
+      const preview = system.previewPrestige(125);
       expect(preview.canPrestige).toBe(true);
       expect(preview.blueprintsEarned).toBeGreaterThan(0);
     });
@@ -87,11 +87,11 @@ describe('PrestigeSystem', () => {
   describe('executePrestige', () => {
     it('returns correct blueprints earned', () => {
       const player = createMockPlayer({blueprints: 50});
-      const result = system.executePrestige(player, 25);
+      const result = system.executePrestige(player, 125);
 
-      expect(result.blueprintsEarned).toBe(system.calculateBlueprintsEarned(25));
+      expect(result.blueprintsEarned).toBe(system.calculateBlueprintsEarned(125));
       expect(result.totalBlueprints).toBe(50 + result.blueprintsEarned);
-      expect(result.waveReached).toBe(25);
+      expect(result.waveReached).toBe(125);
     });
   });
 

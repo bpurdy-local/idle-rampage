@@ -4,6 +4,7 @@ import {calculateProduction} from '../models/Building';
 import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {getUpgradeEffect} from '../models/PrestigeUpgrade';
 import {eventBus, GameEvents} from '../core/EventBus';
+import {SynergySystem, SynergyBonuses} from './SynergySystem';
 
 export interface CombatBonuses {
   prestigeAutoDamage: number;
@@ -12,6 +13,7 @@ export interface CombatBonuses {
   prestigeBurstDamage: number;
   boostMultiplier: number;
   tierMultiplier: number;
+  synergyDamageMultiplier: number;
 }
 
 export interface DamageResult {
@@ -58,7 +60,7 @@ export class CombatSystem {
       totalDamage += baseDamage;
     }
 
-    return totalDamage * bonuses.prestigeAutoDamage * bonuses.boostMultiplier * bonuses.tierMultiplier;
+    return totalDamage * bonuses.prestigeAutoDamage * bonuses.boostMultiplier * bonuses.tierMultiplier * bonuses.synergyDamageMultiplier;
   }
 
   calculateTapDamageBonus(buildings: BuildingState[]): number {
@@ -94,9 +96,10 @@ export class CombatSystem {
     baseTapDamage: number,
     bonuses: CombatBonuses,
   ): number {
-    const randomVariance = 0.8 + Math.random() * 0.4;
+    // Tightened variance: 90-110% (was 80-120%) for more consistent feel
+    const randomVariance = 0.9 + Math.random() * 0.2;
     return Math.floor(
-      baseTapDamage * bonuses.prestigeTapPower * bonuses.boostMultiplier * bonuses.tierMultiplier * randomVariance,
+      baseTapDamage * bonuses.prestigeTapPower * bonuses.boostMultiplier * bonuses.tierMultiplier * bonuses.synergyDamageMultiplier * randomVariance,
     );
   }
 
@@ -222,7 +225,10 @@ export class CombatSystem {
     return result;
   }
 
-  getPrestigeBonuses(prestigeUpgradeLevels: Map<string, number>): CombatBonuses {
+  getPrestigeBonuses(
+    prestigeUpgradeLevels: Map<string, number>,
+    synergyBonuses?: SynergyBonuses,
+  ): CombatBonuses {
     const getBonusForType = (effectType: string): number => {
       const upgrade = PRESTIGE_UPGRADES.find(u => u.effectType === effectType);
       if (!upgrade) return 1;
@@ -237,7 +243,16 @@ export class CombatSystem {
       prestigeBurstDamage: getBonusForType('burst_damage') / 5,
       boostMultiplier: 1,
       tierMultiplier: 1,
+      synergyDamageMultiplier: synergyBonuses?.damageMultiplier ?? 1,
     };
+  }
+
+  /**
+   * Create a SynergySystem instance and calculate bonuses from buildings.
+   */
+  getSynergyBonuses(buildings: BuildingState[]): SynergyBonuses {
+    const synergySystem = new SynergySystem();
+    return synergySystem.calculateSynergyBonuses(buildings);
   }
 
   createInitialCombatState(): CombatState {

@@ -69,18 +69,23 @@ describe('ProductionSystem', () => {
       expect(production).toBeGreaterThan(0);
     });
 
-    it('scales with effective worker count (passive + assigned)', () => {
-      // 0 assigned = 1 effective, 1 assigned = 2 effective, 2 assigned = 3 effective
+    it('has diminishing returns with more workers', () => {
+      // Workers have diminishing returns - each additional worker is less efficient
       const building0 = createMockBuilding('scrap_works', 0);
       const building1 = createMockBuilding('scrap_works', 1);
-      const building2 = createMockBuilding('scrap_works', 2);
+      const building5 = createMockBuilding('scrap_works', 5);
 
       const prod0 = system.calculateBuildingProduction(building0, defaultBonuses);
       const prod1 = system.calculateBuildingProduction(building1, defaultBonuses);
-      const prod2 = system.calculateBuildingProduction(building2, defaultBonuses);
+      const prod5 = system.calculateBuildingProduction(building5, defaultBonuses);
 
+      // First worker doubles production (100% efficient)
       expect(prod1).toBe(prod0 * 2); // 2 effective vs 1 effective
-      expect(prod2).toBe(prod0 * 3); // 3 effective vs 1 effective
+
+      // 5 workers should NOT be 6x the base (diminishing returns)
+      // But production should still increase and benefit from milestone bonus at 5
+      expect(prod5).toBeGreaterThan(prod1);
+      expect(prod5).toBeLessThan(prod0 * 6); // Less than linear scaling
     });
 
     it('applies wave bonus', () => {

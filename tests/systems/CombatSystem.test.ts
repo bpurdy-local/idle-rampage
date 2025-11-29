@@ -49,6 +49,7 @@ const defaultBonuses: CombatBonuses = {
   prestigeBurstDamage: 1,
   boostMultiplier: 1,
   tierMultiplier: 1,
+  synergyDamageMultiplier: 1,
 };
 
 describe('CombatSystem', () => {

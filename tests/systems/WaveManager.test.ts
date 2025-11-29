@@ -50,7 +50,7 @@ describe('WaveManager', () => {
   describe('calculateWaveTimer', () => {
     it('returns base timer for wave 1', () => {
       const timer = manager.calculateWaveTimer(1);
-      expect(timer).toBeGreaterThanOrEqual(30);
+      expect(timer).toBeGreaterThanOrEqual(15);
     });
 
     it('increases timer with wave', () => {
@@ -61,12 +61,12 @@ describe('WaveManager', () => {
 
     it('caps at max timer for non-boss waves', () => {
       const timer = manager.calculateWaveTimer(999); // Non-boss wave
-      expect(timer).toBeLessThanOrEqual(60);
+      expect(timer).toBeLessThanOrEqual(45);
     });
 
     it('allows boss waves to exceed normal max (with 1.5x multiplier)', () => {
       const timer = manager.calculateWaveTimer(1000); // Boss wave
-      expect(timer).toBeLessThanOrEqual(90); // 60 * 1.5
+      expect(timer).toBeLessThanOrEqual(67.5); // 45 * 1.5
     });
   });
 
