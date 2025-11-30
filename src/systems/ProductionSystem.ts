@@ -4,7 +4,12 @@ import {
   toBuildingType,
   EVOLVABLE_BUILDINGS,
 } from '../data/buildings';
-import {calculateProduction} from '../models/Building';
+import {
+  calculateWaveBonus,
+  calculateCommandCenterBonus,
+  calculateBuildingProduction,
+  calculateOfflineProduction,
+} from '../data/formulas';
 
 export interface ProductionResult {
   buildingId: string;
@@ -27,25 +32,11 @@ export interface ProductionBonuses {
 
 export class ProductionSystem {
   /**
-   * Calculate wave-based efficiency bonus for buildings
-   * Higher waves = more efficient buildings
-   * This provides a significant boost as you progress through waves
+   * Calculate wave-based efficiency bonus for buildings.
+   * Uses centralized formula from src/data/formulas/production.ts
    */
   calculateWaveBonus(currentWave: number): number {
-    // Base bonus: logarithmic scaling for early game smoothness
-    const logBonus = Math.log10(currentWave + 1) * 0.5;
-
-    // Linear bonus: 2% per wave for consistent growth
-    const linearBonus = currentWave * 0.02;
-
-    // Milestone bonuses: extra boost at key wave thresholds
-    let milestoneBonus = 0;
-    if (currentWave >= 25) milestoneBonus += 0.25;
-    if (currentWave >= 50) milestoneBonus += 0.5;
-    if (currentWave >= 75) milestoneBonus += 0.75;
-    if (currentWave >= 100) milestoneBonus += 1.0;
-
-    return 1 + logBonus + linearBonus + milestoneBonus;
+    return calculateWaveBonus(currentWave);
   }
 
   /**
@@ -59,17 +50,11 @@ export class ProductionSystem {
     const evolvableBuilding = getEvolvableBuildingById('command_center');
     if (!evolvableBuilding) return 1;
 
-    // Get the tier based on the building's current evolution tier
     const tier = evolvableBuilding.tiers[commandCenter.evolutionTier - 1];
     if (!tier) return 1;
 
-    // Static effect: baseProduction + 2% per level above 1
-    // e.g., Tier 1 at level 5: 15% + (4 * 2%) = 23%
-    const baseBonus = tier.baseProduction;
-    const levelBonus = (commandCenter.level - 1) * 0.02;
-    const totalBonus = baseBonus + levelBonus;
-
-    return 1 + totalBonus;
+    // Use centralized formula
+    return calculateCommandCenterBonus(tier.baseProduction, commandCenter.level);
   }
 
   calculateBuildingProduction(
@@ -82,14 +67,14 @@ export class ProductionSystem {
     if (!evolvableBuilding) return 0;
     if (evolvableBuilding.role !== 'production') return 0;
 
-    // Get the tier based on the building's current evolution tier
     const tier = evolvableBuilding.tiers[building.evolutionTier - 1];
     if (!tier) return 0;
 
     const buildingType = toBuildingType(evolvableBuilding, tier);
 
-    const baseProduction = calculateProduction(
-      buildingType,
+    // Use centralized formula
+    const baseProduction = calculateBuildingProduction(
+      buildingType.baseProduction,
       building.level,
       building.assignedBuilders,
       bonuses.waveBonus,
@@ -140,18 +125,14 @@ export class ProductionSystem {
     buildings: BuildingState[],
     bonuses: ProductionBonuses,
     offlineSeconds: number,
-    maxOfflineHours: number = 8,
   ): number {
-    const maxOfflineSeconds = maxOfflineHours * 3600;
-    const cappedSeconds = Math.min(offlineSeconds, maxOfflineSeconds);
-
     let totalProductionPerSecond = 0;
     for (const building of buildings) {
       totalProductionPerSecond += this.calculateBuildingProduction(building, bonuses);
     }
 
-    const offlineEfficiency = 0.5;
-    return Math.floor(totalProductionPerSecond * cappedSeconds * offlineEfficiency);
+    // Use centralized formula
+    return calculateOfflineProduction(totalProductionPerSecond, offlineSeconds);
   }
 
   getProductionBreakdown(

@@ -13,7 +13,15 @@ import {BuildingType, SpecialEffectType} from '../../models/Building';
 import {ProgressBar} from '../common/ProgressBar';
 import {formatNumber} from '../../utils/formatters';
 import {getTieredBuildingName, getTierColor} from '../../data/buildings';
-import {SPECIAL_EFFECT_CONFIG} from '../../data/specialEffectConfig';
+import {
+  calculateScrapFindCooldown,
+  calculateBurstBoostChance,
+  calculateCriticalWeaknessChance,
+  calculateWaveExtendChance,
+  SCRAP_FIND_BASE_REWARD_PERCENT,
+  SCRAP_FIND_TIER_MULTIPLIERS,
+  CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER,
+} from '../../data/formulas';
 
 interface BuildingCardProps {
   building: BuildingState;
@@ -93,36 +101,33 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
 
     switch (specialEffectType) {
       case 'scrap_find': {
-        const config = SPECIAL_EFFECT_CONFIG.scrapFind;
-        const cooldownMs = Math.max(
-          config.minCooldownMs,
-          config.baseCooldownMs - (level - 1) * config.cooldownPerLevelMs - workers * config.cooldownPerWorkerMs,
-        );
-        const rewardPercent = config.baseRewardPercent * (config.tierMultipliers[tier - 1] ?? 1);
+        // Use centralized formulas from src/data/formulas/economy.ts
+        const cooldownMs = calculateScrapFindCooldown(level, workers);
+        const rewardPercent = SCRAP_FIND_BASE_REWARD_PERCENT * (SCRAP_FIND_TIER_MULTIPLIERS[tier - 1] ?? 1);
         return {
           label: 'Scrap Find',
           value: `${Math.round(rewardPercent * 100)}% every ${(cooldownMs / 1000).toFixed(0)}s`,
         };
       }
       case 'burst_boost': {
-        const config = SPECIAL_EFFECT_CONFIG.burstBoost;
-        const chance = config.baseChance + (level - 1) * config.chancePerLevel + workers * config.chancePerWorker + (tier - 1) * config.chancePerTier;
+        // Use centralized formula from src/data/formulas/economy.ts
+        const chance = calculateBurstBoostChance(level, workers, tier);
         return {
           label: 'Burst Boost',
           value: `+${(chance * 100).toFixed(1)}%`,
         };
       }
       case 'critical_weakness': {
-        const config = SPECIAL_EFFECT_CONFIG.criticalWeakness;
-        const chance = config.baseChance + (level - 1) * config.chancePerLevel + workers * config.chancePerWorker + (tier - 1) * config.chancePerTier;
+        // Use centralized formula from src/data/formulas/economy.ts
+        const chance = calculateCriticalWeaknessChance(level, workers, tier);
         return {
           label: 'Critical',
-          value: `${(chance * 100).toFixed(0)}% for ${config.damageMultiplier}x`,
+          value: `${(chance * 100).toFixed(0)}% for ${CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER}x`,
         };
       }
       case 'wave_extend': {
-        const config = SPECIAL_EFFECT_CONFIG.waveExtend;
-        const chance = config.baseChance + (level - 1) * config.chancePerLevel + (tier - 1) * config.chancePerTier;
+        // Use centralized formula from src/data/formulas/economy.ts
+        const chance = calculateWaveExtendChance(level, tier);
         return {
           label: 'Wave Ext.',
           value: `${(chance * 100).toFixed(0)}% chance`,

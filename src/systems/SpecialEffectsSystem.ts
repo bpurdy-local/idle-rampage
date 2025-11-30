@@ -1,6 +1,15 @@
 import {BuildingState} from '../core/GameState';
 import {getEvolvableBuildingById} from '../data/buildings';
-import {SPECIAL_EFFECT_CONFIG} from '../data/specialEffectConfig';
+import {
+  calculateScrapFindCooldown as calculateScrapFindCooldownFormula,
+  calculateScrapFindAmount as calculateScrapFindAmountFormula,
+  calculateBurstBoostChance as calculateBurstBoostChanceFormula,
+  calculateCriticalWeaknessChance as calculateCriticalWeaknessChanceFormula,
+  calculateWaveExtendChance as calculateWaveExtendChanceFormula,
+  calculateWaveExtendBonus as calculateWaveExtendBonusFormula,
+  BURST_BOOST_MAX_TOTAL_CHANCE,
+  CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER,
+} from '../data/formulas';
 
 export interface ScrapFindResult {
   triggered: boolean;
@@ -28,11 +37,8 @@ export class SpecialEffectsSystem {
     assignedBuilders: number,
     _tier: number, // Reserved for future tier-based cooldown adjustments
   ): number {
-    const config = SPECIAL_EFFECT_CONFIG.scrapFind;
-    const levelReduction = (level - 1) * config.cooldownPerLevelMs;
-    const workerReduction = assignedBuilders * config.cooldownPerWorkerMs;
-    const cooldown = config.baseCooldownMs - levelReduction - workerReduction;
-    return Math.max(config.minCooldownMs, cooldown);
+    // Use centralized formula from src/data/formulas/economy.ts
+    return calculateScrapFindCooldownFormula(level, assignedBuilders);
   }
 
   calculateScrapFindAmount(
@@ -41,10 +47,13 @@ export class SpecialEffectsSystem {
     prestigeProductionBonus: number = 1,
     prestigeWaveRewardBonus: number = 1,
   ): number {
-    const config = SPECIAL_EFFECT_CONFIG.scrapFind;
-    const tierMultiplier = config.tierMultipliers[tier - 1] ?? 1.0;
-    const baseAmount = waveReward * config.baseRewardPercent;
-    return Math.floor(baseAmount * tierMultiplier * prestigeProductionBonus * prestigeWaveRewardBonus);
+    // Use centralized formula from src/data/formulas/economy.ts
+    return calculateScrapFindAmountFormula(
+      waveReward,
+      tier,
+      prestigeProductionBonus,
+      prestigeWaveRewardBonus,
+    );
   }
 
   processScrapFind(
@@ -87,11 +96,8 @@ export class SpecialEffectsSystem {
     assignedBuilders: number,
     tier: number,
   ): number {
-    const config = SPECIAL_EFFECT_CONFIG.burstBoost;
-    const levelBonus = (level - 1) * config.chancePerLevel;
-    const workerBonus = assignedBuilders * config.chancePerWorker;
-    const tierBonus = (tier - 1) * config.chancePerTier;
-    return config.baseChance + levelBonus + workerBonus + tierBonus;
+    // Use centralized formula from src/data/formulas/economy.ts
+    return calculateBurstBoostChanceFormula(level, assignedBuilders, tier);
   }
 
   getBurstBoostFromBuilding(building: BuildingState): BurstBoostResult {
@@ -115,7 +121,6 @@ export class SpecialEffectsSystem {
   }
 
   getTotalBurstBoost(buildings: BuildingState[]): number {
-    const config = SPECIAL_EFFECT_CONFIG.burstBoost;
     let totalBonus = 0;
 
     for (const building of buildings) {
@@ -125,7 +130,7 @@ export class SpecialEffectsSystem {
       }
     }
 
-    return Math.min(config.maxTotalChance, totalBonus);
+    return Math.min(BURST_BOOST_MAX_TOTAL_CHANCE, totalBonus);
   }
 
   calculateCriticalWeaknessChance(
@@ -133,11 +138,8 @@ export class SpecialEffectsSystem {
     assignedBuilders: number,
     tier: number,
   ): number {
-    const config = SPECIAL_EFFECT_CONFIG.criticalWeakness;
-    const levelBonus = (level - 1) * config.chancePerLevel;
-    const workerBonus = assignedBuilders * config.chancePerWorker;
-    const tierBonus = (tier - 1) * config.chancePerTier;
-    return config.baseChance + levelBonus + workerBonus + tierBonus;
+    // Use centralized formula from src/data/formulas/economy.ts
+    return calculateCriticalWeaknessChanceFormula(level, assignedBuilders, tier);
   }
 
   shouldSpawnCriticalWeakness(building: BuildingState): CriticalWeaknessResult {
@@ -158,29 +160,25 @@ export class SpecialEffectsSystem {
     );
 
     const isCritical = Math.random() < chance;
-    const config = SPECIAL_EFFECT_CONFIG.criticalWeakness;
 
     return {
       isCritical,
-      damageMultiplier: isCritical ? config.damageMultiplier : 1,
+      damageMultiplier: isCritical ? CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER : 1,
     };
   }
 
   getCriticalWeaknessDamageMultiplier(): number {
-    return SPECIAL_EFFECT_CONFIG.criticalWeakness.damageMultiplier;
+    return CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER;
   }
 
   calculateWaveExtendChance(level: number, tier: number): number {
-    const config = SPECIAL_EFFECT_CONFIG.waveExtend;
-    const levelBonus = (level - 1) * config.chancePerLevel;
-    const tierBonus = (tier - 1) * config.chancePerTier;
-    return config.baseChance + levelBonus + tierBonus;
+    // Use centralized formula from src/data/formulas/economy.ts
+    return calculateWaveExtendChanceFormula(level, tier);
   }
 
   calculateWaveExtendBonus(baseWaveTime: number): number {
-    const config = SPECIAL_EFFECT_CONFIG.waveExtend;
-    const bonusTime = baseWaveTime * config.bonusTimePercent;
-    return Math.min(config.maxBonusSeconds, bonusTime);
+    // Use centralized formula from src/data/formulas/economy.ts
+    return calculateWaveExtendBonusFormula(baseWaveTime);
   }
 
   checkWaveExtension(

@@ -1,6 +1,15 @@
 import {PlayerState} from '../core/GameState';
 import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {PrestigeUpgradeDefinition, getUpgradeCost, getUpgradeEffect} from '../models/PrestigeUpgrade';
+import {
+  calculateBlueprintsEarned as calculateBlueprintsEarnedFormula,
+  canPrestige as canPrestigeFormula,
+  calculateStartingScrapBonus,
+  calculateBuilderPurchaseCost,
+  calculatePrestigeLevel as calculatePrestigeLevelFormula,
+  getPrestigeRank as getPrestigeRankFormula,
+  BASE_BLUEPRINT_WAVE,
+} from '../data/formulas';
 
 export interface PrestigeBonuses {
   productionMultiplier: number;
@@ -19,47 +28,27 @@ export interface PrestigeResetResult {
 }
 
 export class PrestigeSystem {
-  private readonly BASE_BLUEPRINT_WAVE = 100;
-  private readonly BASE_BLUEPRINTS = 100; // Base reward for reaching wave 100
-  private readonly BLUEPRINTS_PER_WAVE = 10; // Blueprints per wave above 100
-  private readonly WAVE_SCALING = 1.10; // Moderate scaling to prevent extreme late-game rewards
-
   /**
-   * Calculate blueprints earned based on wave reached
-   * Much more generous since wave 100 is much harder to reach than wave 10
+   * Calculate blueprints earned based on wave reached.
+   * Uses centralized formula from src/data/formulas/prestige.ts
    */
   calculateBlueprintsEarned(waveReached: number): number {
-    if (waveReached < this.BASE_BLUEPRINT_WAVE) {
-      return 0;
-    }
-
-    // Base reward for reaching wave 100
-    let blueprints = this.BASE_BLUEPRINTS;
-
-    // Additional blueprints for waves beyond 100
-    const wavesAboveBase = waveReached - this.BASE_BLUEPRINT_WAVE;
-
-    for (let i = 1; i <= wavesAboveBase; i++) {
-      blueprints += Math.floor(
-        this.BLUEPRINTS_PER_WAVE * Math.pow(this.WAVE_SCALING, i - 1),
-      );
-    }
-
-    return blueprints;
+    return calculateBlueprintsEarnedFormula(waveReached);
   }
 
   /**
-   * Check if player can prestige (must reach minimum wave)
+   * Check if player can prestige (must reach minimum wave).
+   * Uses centralized formula from src/data/formulas/prestige.ts
    */
   canPrestige(waveReached: number): boolean {
-    return waveReached >= this.BASE_BLUEPRINT_WAVE;
+    return canPrestigeFormula(waveReached);
   }
 
   /**
    * Get minimum wave required to prestige
    */
   getPrestigeRequirement(): number {
-    return this.BASE_BLUEPRINT_WAVE;
+    return BASE_BLUEPRINT_WAVE;
   }
 
   /**
@@ -186,16 +175,11 @@ export class PrestigeSystem {
 
   /**
    * Get starting scrap bonus from prestige upgrades.
-   * Uses wave-based scaling: highestWave * 50 * upgradeLevel
-   * This ensures the bonus scales meaningfully with progression.
+   * Uses centralized formula from src/data/formulas/prestige.ts
    */
   getStartingScrap(ownedUpgrades: Record<string, number>, highestWave: number = 0): number {
     const upgradeLevel = ownedUpgrades['starting_scrap'] ?? 0;
-    if (upgradeLevel === 0) return 0;
-
-    // Wave-based scaling: highestWave * 50 * upgradeLevel
-    // At max level (10) after reaching wave 100: 100 * 50 * 10 = 50,000 scrap
-    return Math.floor(highestWave * 50 * upgradeLevel);
+    return calculateStartingScrapBonus(upgradeLevel, highestWave);
   }
 
   /**
@@ -248,42 +232,27 @@ export class PrestigeSystem {
   }
 
   /**
-   * Calculate prestige level based on total blueprints earned
+   * Calculate prestige level based on total blueprints earned.
+   * Uses centralized formula from src/data/formulas/prestige.ts
    */
   calculatePrestigeLevel(totalBlueprintsEarned: number): number {
-    if (totalBlueprintsEarned < 10) return 0;
-    return Math.floor(Math.log10(totalBlueprintsEarned));
+    return calculatePrestigeLevelFormula(totalBlueprintsEarned);
   }
 
   /**
-   * Get prestige rank name based on level
+   * Get prestige rank name based on level.
+   * Uses centralized formula from src/data/formulas/prestige.ts
    */
   getPrestigeRank(level: number): string {
-    const ranks = [
-      'Rookie',
-      'Scavenger',
-      'Mechanic',
-      'Engineer',
-      'Master',
-      'Elite',
-      'Champion',
-      'Legend',
-      'Mythic',
-      'Transcendent',
-    ];
-
-    return ranks[Math.min(level, ranks.length - 1)];
+    return getPrestigeRankFormula(level);
   }
 
   /**
    * Calculate the cost to purchase a builder with blueprints.
-   * Uses escalating pricing based on how many builders have been purchased.
+   * Uses centralized formula from src/data/formulas/prestige.ts
    */
   getBuilderPurchaseCost(buildersPurchased: number): number {
-    if (buildersPurchased < 5) return 30;
-    if (buildersPurchased < 10) return 50;
-    if (buildersPurchased < 20) return 75;
-    return 100;
+    return calculateBuilderPurchaseCost(buildersPurchased);
   }
 
   /**

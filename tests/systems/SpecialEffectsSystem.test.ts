@@ -1,6 +1,17 @@
 import {SpecialEffectsSystem} from '../../src/systems/SpecialEffectsSystem';
 import {BuildingState} from '../../src/core/GameState';
-import {SPECIAL_EFFECT_CONFIG} from '../../src/data/specialEffectConfig';
+import {
+  SCRAP_FIND_BASE_COOLDOWN_MS,
+  SCRAP_FIND_MIN_COOLDOWN_MS,
+  SCRAP_FIND_BASE_REWARD_PERCENT,
+  BURST_BOOST_BASE_CHANCE,
+  BURST_BOOST_MAX_TOTAL_CHANCE,
+  CRITICAL_WEAKNESS_BASE_CHANCE,
+  CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER,
+  WAVE_EXTEND_BASE_CHANCE,
+  WAVE_EXTEND_BONUS_TIME_PERCENT,
+  WAVE_EXTEND_MAX_BONUS_SECONDS,
+} from '../../src/data/formulas';
 
 const createMockBuilding = (
   typeId: string,
@@ -30,7 +41,7 @@ describe('SpecialEffectsSystem', () => {
     describe('calculateScrapFindCooldown', () => {
       it('returns base cooldown at level 1 with no workers', () => {
         const cooldown = system.calculateScrapFindCooldown(1, 0, 1);
-        expect(cooldown).toBe(SPECIAL_EFFECT_CONFIG.scrapFind.baseCooldownMs);
+        expect(cooldown).toBe(SCRAP_FIND_BASE_COOLDOWN_MS);
       });
 
       it('reduces cooldown with higher level', () => {
@@ -50,7 +61,7 @@ describe('SpecialEffectsSystem', () => {
       it('does not go below minimum cooldown', () => {
         // High level + many workers should hit the floor
         const cooldown = system.calculateScrapFindCooldown(100, 100, 5);
-        expect(cooldown).toBe(SPECIAL_EFFECT_CONFIG.scrapFind.minCooldownMs);
+        expect(cooldown).toBe(SCRAP_FIND_MIN_COOLDOWN_MS);
       });
     });
 
@@ -59,7 +70,7 @@ describe('SpecialEffectsSystem', () => {
         const waveReward = 1000;
         const amount = system.calculateScrapFindAmount(waveReward, 1);
 
-        const expected = Math.floor(waveReward * SPECIAL_EFFECT_CONFIG.scrapFind.baseRewardPercent);
+        const expected = Math.floor(waveReward * SCRAP_FIND_BASE_REWARD_PERCENT);
         expect(amount).toBe(expected);
       });
 
@@ -95,7 +106,7 @@ describe('SpecialEffectsSystem', () => {
       it('triggers after cooldown expires', () => {
         const building = createMockBuilding('scrap_works', 1, 0);
         const lastTriggerTime = 0;
-        const currentTime = SPECIAL_EFFECT_CONFIG.scrapFind.baseCooldownMs + 1000;
+        const currentTime = SCRAP_FIND_BASE_COOLDOWN_MS + 1000;
 
         const result = system.processScrapFind(building, 100, lastTriggerTime, currentTime);
 
@@ -117,7 +128,7 @@ describe('SpecialEffectsSystem', () => {
     describe('calculateBurstBoostChance', () => {
       it('returns base chance at level 1 tier 1', () => {
         const chance = system.calculateBurstBoostChance(1, 0, 1);
-        expect(chance).toBe(SPECIAL_EFFECT_CONFIG.burstBoost.baseChance);
+        expect(chance).toBe(BURST_BOOST_BASE_CHANCE);
       });
 
       it('increases with level', () => {
@@ -162,7 +173,7 @@ describe('SpecialEffectsSystem', () => {
         const buildings = [createMockBuilding('training_facility', 100, 100, true, 5)];
         const boost = system.getTotalBurstBoost(buildings);
 
-        expect(boost).toBeLessThanOrEqual(SPECIAL_EFFECT_CONFIG.burstBoost.maxTotalChance);
+        expect(boost).toBeLessThanOrEqual(BURST_BOOST_MAX_TOTAL_CHANCE);
       });
     });
   });
@@ -171,7 +182,7 @@ describe('SpecialEffectsSystem', () => {
     describe('calculateCriticalWeaknessChance', () => {
       it('returns base chance at level 1 tier 1', () => {
         const chance = system.calculateCriticalWeaknessChance(1, 0, 1);
-        expect(chance).toBe(SPECIAL_EFFECT_CONFIG.criticalWeakness.baseChance);
+        expect(chance).toBe(CRITICAL_WEAKNESS_BASE_CHANCE);
       });
 
       it('increases with level', () => {
@@ -213,9 +224,7 @@ describe('SpecialEffectsSystem', () => {
         for (let i = 0; i < 1000; i++) {
           const result = system.shouldSpawnCriticalWeakness(building);
           if (result.isCritical) {
-            expect(result.damageMultiplier).toBe(
-              SPECIAL_EFFECT_CONFIG.criticalWeakness.damageMultiplier,
-            );
+            expect(result.damageMultiplier).toBe(CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER);
             foundCritical = true;
             break;
           }
@@ -228,7 +237,7 @@ describe('SpecialEffectsSystem', () => {
     describe('getCriticalWeaknessDamageMultiplier', () => {
       it('returns configured multiplier', () => {
         const multiplier = system.getCriticalWeaknessDamageMultiplier();
-        expect(multiplier).toBe(SPECIAL_EFFECT_CONFIG.criticalWeakness.damageMultiplier);
+        expect(multiplier).toBe(CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER);
       });
     });
   });
@@ -237,7 +246,7 @@ describe('SpecialEffectsSystem', () => {
     describe('calculateWaveExtendChance', () => {
       it('returns base chance at level 1 tier 1', () => {
         const chance = system.calculateWaveExtendChance(1, 1);
-        expect(chance).toBe(SPECIAL_EFFECT_CONFIG.waveExtend.baseChance);
+        expect(chance).toBe(WAVE_EXTEND_BASE_CHANCE);
       });
 
       it('increases with level', () => {
@@ -260,7 +269,7 @@ describe('SpecialEffectsSystem', () => {
         const baseWaveTime = 30;
         const bonus = system.calculateWaveExtendBonus(baseWaveTime);
 
-        const expected = baseWaveTime * SPECIAL_EFFECT_CONFIG.waveExtend.bonusTimePercent;
+        const expected = baseWaveTime * WAVE_EXTEND_BONUS_TIME_PERCENT;
         expect(bonus).toBe(expected);
       });
 
@@ -268,7 +277,7 @@ describe('SpecialEffectsSystem', () => {
         const veryLongWaveTime = 1000;
         const bonus = system.calculateWaveExtendBonus(veryLongWaveTime);
 
-        expect(bonus).toBe(SPECIAL_EFFECT_CONFIG.waveExtend.maxBonusSeconds);
+        expect(bonus).toBe(WAVE_EXTEND_MAX_BONUS_SECONDS);
       });
     });
 

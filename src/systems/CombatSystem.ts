@@ -5,6 +5,14 @@ import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {getUpgradeEffect} from '../models/PrestigeUpgrade';
 import {eventBus, GameEvents} from '../core/EventBus';
 import {SpecialEffectsSystem} from './SpecialEffectsSystem';
+import {
+  calculateTapDamage as calculateTapDamageFormula,
+  checkBurstAttack as checkBurstAttackFormula,
+  calculateScrapFromDamage as calculateScrapFromDamageFormula,
+  BASE_TAP_DAMAGE,
+  DEFAULT_BURST_CHANCE,
+  DEFAULT_BURST_MULTIPLIER,
+} from '../data/formulas';
 
 export interface CombatBonuses {
   prestigeAutoDamage: number;
@@ -31,14 +39,8 @@ export interface CombatTickResult {
   scrapFromDamage: number;
 }
 
-/**
- * INTENTIONAL DESIGN: 50/50 split between damage-based and wave-completion scrap.
- * This creates balanced incentives:
- * - 50% from damage: Rewards maximizing DPS and active play
- * - 50% from wave completion: Rewards finishing waves efficiently
- * Evaluated alternatives (30/70, 70/30) but 50/50 provides best balance.
- */
-export const DAMAGE_SCRAP_PERCENT = 0.5;
+// Re-export for backward compatibility
+export {DAMAGE_SCRAP_PERCENT} from '../data/formulas';
 
 export class CombatSystem {
   calculateAutoDamage(
@@ -109,10 +111,12 @@ export class CombatSystem {
     baseTapDamage: number,
     bonuses: CombatBonuses,
   ): number {
-    // Tightened variance: 90-110% (was 80-120%) for more consistent feel
-    const randomVariance = 0.9 + Math.random() * 0.2;
-    return Math.floor(
-      baseTapDamage * bonuses.prestigeTapPower * bonuses.boostMultiplier * bonuses.tierMultiplier * randomVariance,
+    // Use centralized formula from src/data/formulas/combat.ts
+    return calculateTapDamageFormula(
+      baseTapDamage,
+      bonuses.prestigeTapPower,
+      bonuses.boostMultiplier,
+      bonuses.tierMultiplier,
     );
   }
 
@@ -122,34 +126,31 @@ export class CombatSystem {
     bonuses: CombatBonuses,
     trainingFacilityBoost: number = 0,
   ): {triggered: boolean; multiplier: number} {
-    const effectiveChance = burstChance + bonuses.prestigeBurstChance + trainingFacilityBoost;
-    const triggered = Math.random() < effectiveChance;
-    const multiplier = triggered
-      ? burstMultiplier * bonuses.prestigeBurstDamage
-      : 1;
-
-    return {triggered, multiplier};
+    // Use centralized formula from src/data/formulas/combat.ts
+    return checkBurstAttackFormula(
+      burstChance,
+      burstMultiplier,
+      bonuses.prestigeBurstChance,
+      bonuses.prestigeBurstDamage,
+      trainingFacilityBoost,
+    );
   }
 
   /**
    * Calculate scrap earned from dealing damage to an enemy.
-   * Scrap is proportional to damage dealt relative to enemy's max health.
+   * Uses centralized formula from src/data/formulas/combat.ts
    */
   calculateScrapFromDamage(
     damage: number,
     enemy: EnemyState,
     rewardMultiplier: number = 1,
   ): number {
-    if (damage <= 0 || enemy.maxHealth <= 0) return 0;
-
-    // The pool of scrap available from damage (rest comes from wave completion)
-    const damageScrapPool = enemy.reward * DAMAGE_SCRAP_PERCENT;
-
-    // Scrap earned is proportional to damage dealt vs max health
-    const damagePercent = damage / enemy.maxHealth;
-    const scrapEarned = damageScrapPool * damagePercent * rewardMultiplier;
-
-    return Math.floor(scrapEarned);
+    return calculateScrapFromDamageFormula(
+      damage,
+      enemy.maxHealth,
+      enemy.reward,
+      rewardMultiplier,
+    );
   }
 
   applyDamage(
@@ -307,9 +308,9 @@ export class CombatSystem {
       waveTimer: 30,
       waveTimerMax: 30,
       autoDamagePerTick: 1,
-      burstChance: 0.05,
-      burstMultiplier: 5,
-      baseTapDamage: 10,
+      burstChance: DEFAULT_BURST_CHANCE,
+      burstMultiplier: DEFAULT_BURST_MULTIPLIER,
+      baseTapDamage: BASE_TAP_DAMAGE,
     };
   }
 }

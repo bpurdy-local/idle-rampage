@@ -9,6 +9,7 @@ import Animated, {
   Easing,
   cancelAnimation,
 } from 'react-native-reanimated';
+import {CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER} from '../../data/formulas';
 
 export interface WeakPoint {
   id: string;
@@ -321,13 +322,11 @@ export const getWeakPointDamageMultiplier = (
 };
 
 /**
- * Get the critical weakness damage multiplier from config.
- * This multiplies with the normal weak point damage for critical hits.
+ * Get the critical weakness damage multiplier.
+ * Uses centralized constant from src/data/formulas/economy.ts
  */
 export const getCriticalWeaknessDamageMultiplier = (): number => {
-  // Import dynamically to avoid circular dependencies
-  const {SPECIAL_EFFECT_CONFIG} = require('../../data/specialEffectConfig');
-  return SPECIAL_EFFECT_CONFIG.criticalWeakness.damageMultiplier;
+  return CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER;
 };
 
 const styles = StyleSheet.create({

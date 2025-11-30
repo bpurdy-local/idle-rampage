@@ -1,16 +1,9 @@
-import React, {useEffect} from 'react';
+import React, {useCallback} from 'react';
 import {View, Text, StyleSheet} from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSequence,
-  withDelay,
-  Easing,
-  runOnJS,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import {formatNumber} from '../../utils/formatters';
 import {SpecialEffectType} from '../../models/Building';
+import {useNotificationAnimation} from '../../hooks/useNotificationAnimation';
 
 export interface SpecialEffectNotificationData {
   id: string;
@@ -66,50 +59,13 @@ export const SpecialEffectNotification: React.FC<SpecialEffectNotificationProps>
   data,
   onComplete,
 }) => {
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(20);
-  const scale = useSharedValue(0.8);
-
   const config = EFFECT_CONFIG[data.effectType];
 
-  useEffect(() => {
-    const duration = 300;
-    const holdDuration = 2000;
+  const handleComplete = useCallback(() => {
+    onComplete(data.id);
+  }, [onComplete, data.id]);
 
-    opacity.value = withSequence(
-      withTiming(1, {duration, easing: Easing.out(Easing.cubic)}),
-      withDelay(
-        holdDuration,
-        withTiming(0, {duration, easing: Easing.in(Easing.cubic)}, finished => {
-          if (finished) {
-            runOnJS(onComplete)(data.id);
-          }
-        }),
-      ),
-    );
-
-    translateY.value = withSequence(
-      withTiming(0, {duration, easing: Easing.out(Easing.cubic)}),
-      withDelay(
-        holdDuration,
-        withTiming(-10, {duration, easing: Easing.in(Easing.cubic)}),
-      ),
-    );
-
-    scale.value = withSequence(
-      withTiming(1.1, {duration: duration / 2, easing: Easing.out(Easing.cubic)}),
-      withTiming(1, {duration: duration / 2, easing: Easing.in(Easing.cubic)}),
-      withDelay(
-        holdDuration - duration / 2,
-        withTiming(0.9, {duration, easing: Easing.in(Easing.cubic)}),
-      ),
-    );
-  }, [opacity, translateY, scale, onComplete, data.id]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{translateY: translateY.value}, {scale: scale.value}],
-  }));
+  const {animatedStyle} = useNotificationAnimation(handleComplete);
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>

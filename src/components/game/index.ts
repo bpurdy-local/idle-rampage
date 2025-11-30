@@ -16,7 +16,6 @@ export {DamagePopup} from './DamagePopup';
 export {DamagePopupManager} from './DamagePopupManager';
 export type {DamagePopupData} from './DamagePopup';
 export {MilestonePopup} from './MilestonePopup';
-export {BuildingEvolutionPopup} from './BuildingEvolutionPopup';
 export {EvolutionToast} from './EvolutionToast';
 export {WeakPointOverlay, checkWeakPointHit, getWeakPointDamageMultiplier} from './WeakPointOverlay';
 export type {WeakPoint} from './WeakPointOverlay';

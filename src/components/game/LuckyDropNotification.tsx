@@ -1,16 +1,9 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {View, Text, StyleSheet} from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSequence,
-  withDelay,
-  Easing,
-  runOnJS,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import {LuckyDrop, RARITY_COLORS, DROP_ICONS} from '../../data/luckyDrops';
 import {formatNumber} from '../../utils/formatters';
+import {useNotificationAnimation} from '../../hooks/useNotificationAnimation';
 
 interface LuckyDropNotificationProps {
   drop: LuckyDrop;
@@ -23,51 +16,10 @@ export const LuckyDropNotification: React.FC<LuckyDropNotificationProps> = ({
   amount,
   onComplete,
 }) => {
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(20);
-  const scale = useSharedValue(0.8);
+  const {animatedStyle} = useNotificationAnimation(onComplete);
 
   const rarityColor = RARITY_COLORS[drop.rarity];
   const icon = DROP_ICONS[drop.type];
-
-  useEffect(() => {
-    const duration = 300;
-    const holdDuration = 2000;
-
-    opacity.value = withSequence(
-      withTiming(1, {duration, easing: Easing.out(Easing.cubic)}),
-      withDelay(
-        holdDuration,
-        withTiming(0, {duration, easing: Easing.in(Easing.cubic)}, finished => {
-          if (finished) {
-            runOnJS(onComplete)();
-          }
-        }),
-      ),
-    );
-
-    translateY.value = withSequence(
-      withTiming(0, {duration, easing: Easing.out(Easing.cubic)}),
-      withDelay(
-        holdDuration,
-        withTiming(-10, {duration, easing: Easing.in(Easing.cubic)}),
-      ),
-    );
-
-    scale.value = withSequence(
-      withTiming(1.1, {duration: duration / 2, easing: Easing.out(Easing.cubic)}),
-      withTiming(1, {duration: duration / 2, easing: Easing.in(Easing.cubic)}),
-      withDelay(
-        holdDuration - duration / 2,
-        withTiming(0.9, {duration, easing: Easing.in(Easing.cubic)}),
-      ),
-    );
-  }, [opacity, translateY, scale, onComplete]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{translateY: translateY.value}, {scale: scale.value}],
-  }));
 
   const formatDropAmount = (): string => {
     if (drop.type === 'scrap') {

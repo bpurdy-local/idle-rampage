@@ -24,10 +24,8 @@ import {
   OfflineEarningsModal,
   LuckyDropNotification,
   TapRipple,
-  TapRippleData,
   WaveVictoryFlash,
   ResourcePopup,
-  ResourcePopupData,
   DamagePopupManager,
   MilestonePopup,
   BuildingEvolutionTooltip,
@@ -39,7 +37,6 @@ import {
   WeakPoint,
   OnboardingTutorial,
   SpecialEffectNotification,
-  SpecialEffectNotificationData,
   WaveExtendFlash,
 } from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
@@ -48,6 +45,7 @@ import {DropResult} from '../systems/LuckyDropSystem';
 import {BoostState} from '../core/GameState';
 import {eventBus, GameEvents} from '../core/EventBus';
 import {useDamagePopups} from '../hooks/useDamagePopups';
+import {useGameNotifications} from '../hooks/useGameNotifications';
 import {
   getEvolvableBuildingById,
   toBuildingType,
@@ -65,9 +63,7 @@ import {PrestigeSystem} from '../systems/PrestigeSystem';
 import {SpecialEffectsSystem} from '../systems/SpecialEffectsSystem';
 import {DEBUG_CONFIG} from '../data/debugConfig';
 import {saveService} from '../services/SaveService';
-
-// Minimum time between taps in milliseconds (prevents auto-clicker abuse)
-const TAP_COOLDOWN_MS = 150;
+import {TAP_COOLDOWN_MS} from '../data/formulas';
 
 export const GameScreen: React.FC = () => {
   const [showPrestige, setShowPrestige] = useState(false);
@@ -79,11 +75,6 @@ export const GameScreen: React.FC = () => {
     earnings: number;
     productionRate: number;
   } | null>(null);
-  const [activeDrop, setActiveDrop] = useState<DropResult | null>(null);
-  const [tapRipples, setTapRipples] = useState<TapRippleData[]>([]);
-  const [showVictoryFlash, setShowVictoryFlash] = useState(false);
-  const [victoryWasBoss, setVictoryWasBoss] = useState(false);
-  const [resourcePopups, setResourcePopups] = useState<ResourcePopupData[]>([]);
   const [selectedBuildingInfo, setSelectedBuildingInfo] = useState<BuildingType | null>(null);
   const [milestoneUnlocked, setMilestoneUnlocked] = useState<PrestigeTier | null>(null);
   const [buildingEvolution, setBuildingEvolution] = useState<{
@@ -94,10 +85,6 @@ export const GameScreen: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [weakPoints, setWeakPoints] = useState<WeakPoint[]>([]);
-  const [specialEffectNotifications, setSpecialEffectNotifications] = useState<SpecialEffectNotificationData[]>([]);
-  const [showWaveExtendFlash, setShowWaveExtendFlash] = useState(false);
-  const [waveExtendBonusSeconds, setWaveExtendBonusSeconds] = useState(0);
-  const specialEffectNotificationIdRef = useRef(0);
   const [enemyDisplayBounds, setEnemyDisplayBounds] = useState<{width: number; height: number; x: number; y: number}>({
     width: 350,
     height: 300,
@@ -107,28 +94,32 @@ export const GameScreen: React.FC = () => {
   const lastTapTimeRef = useRef<number>(0);
   const enemyAreaRef = useRef<{x: number; y: number}>({x: 200, y: 250});
   const hasCheckedOfflineEarnings = useRef(false);
-  const tapRippleIdRef = useRef(0);
-  const resourcePopupIdRef = useRef(0);
 
   const {popups, spawnPopup, removePopup} = useDamagePopups();
 
-  const spawnTapRipple = useCallback((x: number, y: number) => {
-    const id = `ripple_${tapRippleIdRef.current++}`;
-    setTapRipples(prev => [...prev.slice(-5), {id, x, y}]);
-  }, []);
-
-  const removeTapRipple = useCallback((id: string) => {
-    setTapRipples(prev => prev.filter(r => r.id !== id));
-  }, []);
-
-  const spawnResourcePopup = useCallback((amount: number, type: 'scrap' | 'blueprints', x: number, y: number) => {
-    const id = `resource_${resourcePopupIdRef.current++}`;
-    setResourcePopups(prev => [...prev.slice(-3), {id, amount, type, x, y}]);
-  }, []);
-
-  const removeResourcePopup = useCallback((id: string) => {
-    setResourcePopups(prev => prev.filter(r => r.id !== id));
-  }, []);
+  // Use consolidated notification hook
+  const {
+    activeDrop,
+    showLuckyDrop,
+    hideLuckyDrop,
+    tapRipples,
+    spawnTapRipple,
+    removeTapRipple,
+    resourcePopups,
+    spawnResourcePopup,
+    removeResourcePopup,
+    showVictoryFlash,
+    victoryWasBoss,
+    showVictory,
+    hideVictory,
+    specialEffectNotifications,
+    spawnSpecialEffectNotification,
+    removeSpecialEffectNotification,
+    showWaveExtendFlash,
+    waveExtendBonusSeconds,
+    showWaveExtend,
+    hideWaveExtend,
+  } = useGameNotifications();
 
   // Weak point change handler
   const handleWeakPointsChange = useCallback((points: WeakPoint[]) => {
@@ -200,17 +191,16 @@ export const GameScreen: React.FC = () => {
         }
         break;
     }
-    setActiveDrop(drop);
-  }, [addScrap, addBlueprints, addBoost]);
+    showLuckyDrop(drop);
+  }, [addScrap, addBlueprints, addBoost, showLuckyDrop]);
 
   // Game tick callbacks
   const handleWaveComplete = useCallback(
     (reward: number, isBoss: boolean) => {
-      setVictoryWasBoss(isBoss);
-      setShowVictoryFlash(true);
+      showVictory(isBoss);
       spawnResourcePopup(reward, 'scrap', SCREEN_WIDTH / 2 - 50, 180);
     },
-    [spawnResourcePopup],
+    [spawnResourcePopup, showVictory],
   );
 
   const handleWaveFailed = useCallback(() => {
@@ -220,26 +210,21 @@ export const GameScreen: React.FC = () => {
   // Special effect callbacks
   const handleScrapFind = useCallback(
     (event: {amount: number; buildingName: string}) => {
-      const id = `special_${specialEffectNotificationIdRef.current++}`;
-      setSpecialEffectNotifications(prev => [
-        ...prev.slice(-2),
-        {id, effectType: 'scrap_find', amount: event.amount, buildingName: event.buildingName},
-      ]);
+      spawnSpecialEffectNotification({
+        effectType: 'scrap_find',
+        amount: event.amount,
+        buildingName: event.buildingName,
+      });
     },
-    [],
+    [spawnSpecialEffectNotification],
   );
 
   const handleWaveExtend = useCallback(
     (event: {bonusSeconds: number}) => {
-      setWaveExtendBonusSeconds(Math.round(event.bonusSeconds));
-      setShowWaveExtendFlash(true);
+      showWaveExtend(event.bonusSeconds);
     },
-    [],
+    [showWaveExtend],
   );
-
-  const removeSpecialEffectNotification = useCallback((id: string) => {
-    setSpecialEffectNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
 
   // Start game loop with extracted tick logic
   useGameTick({
@@ -364,8 +349,8 @@ export const GameScreen: React.FC = () => {
 
   // Handle drop notification complete
   const handleDropNotificationComplete = useCallback(() => {
-    setActiveDrop(null);
-  }, []);
+    hideLuckyDrop();
+  }, [hideLuckyDrop]);
 
   // Handle claiming daily reward
   const handleClaimDailyReward = useCallback(() => {
@@ -632,7 +617,7 @@ export const GameScreen: React.FC = () => {
       <WaveVictoryFlash
         visible={showVictoryFlash}
         isBoss={victoryWasBoss}
-        onComplete={() => setShowVictoryFlash(false)}
+        onComplete={hideVictory}
       />
 
       {activeDrop && (
@@ -655,7 +640,7 @@ export const GameScreen: React.FC = () => {
       <WaveExtendFlash
         visible={showWaveExtendFlash}
         bonusSeconds={waveExtendBonusSeconds}
-        onComplete={() => setShowWaveExtendFlash(false)}
+        onComplete={hideWaveExtend}
       />
 
       <View style={styles.tabs}>

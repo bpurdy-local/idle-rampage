@@ -1,4 +1,8 @@
 import {calculateWorkerEfficiency} from '../systems/WorkerEfficiency';
+import {
+  calculateBuildingUpgradeCost,
+  calculateLevelMultiplier,
+} from '../data/formulas';
 
 export type SpecialEffectType =
   | 'scrap_find'
@@ -82,8 +86,11 @@ export const calculateUpgradeCost = (
   buildingType: BuildingType,
   currentLevel: number,
 ): number => {
-  return Math.floor(
-    buildingType.baseCost * Math.pow(buildingType.costMultiplier, currentLevel - 1),
+  // Use centralized formula from src/data/formulas/economy.ts
+  return calculateBuildingUpgradeCost(
+    buildingType.baseCost,
+    buildingType.costMultiplier,
+    currentLevel,
   );
 };
 
@@ -114,8 +121,8 @@ export const calculateProduction = (
   includePassive: boolean = true,
 ): number => {
   const baseOutput = buildingType.baseProduction;
-  // Improved level scaling: +75% per level (was +50%)
-  const levelMultiplier = 1 + (level - 1) * 0.75;
+  // Use centralized formula from src/data/formulas/production.ts
+  const levelMult = calculateLevelMultiplier(level);
 
   // Calculate effective workers with diminishing returns and milestone bonuses
   const efficiency = calculateWorkerEfficiency(assignedBuilders, includePassive);
@@ -123,7 +130,7 @@ export const calculateProduction = (
 
   if (effectiveWorkers === 0) return 0;
 
-  return baseOutput * levelMultiplier * effectiveWorkers * waveBonus * prestigeBonus;
+  return baseOutput * levelMult * effectiveWorkers * waveBonus * prestigeBonus;
 };
 
 /**
@@ -146,12 +153,13 @@ export const getProductionBreakdown = (
   totalProduction: number;
 } => {
   const baseOutput = buildingType.baseProduction;
-  const levelMultiplier = 1 + (level - 1) * 0.75;
+  // Use centralized formula from src/data/formulas/production.ts
+  const levelMult = calculateLevelMultiplier(level);
   const efficiency = calculateWorkerEfficiency(assignedBuilders, true);
 
   return {
     baseProduction: baseOutput,
-    levelMultiplier,
+    levelMultiplier: levelMult,
     effectiveWorkers: efficiency.effectiveWorkers,
     workerEfficiency: efficiency.averageEfficiency,
     milestoneBonus: efficiency.milestoneBonus,

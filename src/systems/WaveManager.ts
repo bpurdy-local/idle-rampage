@@ -11,6 +11,14 @@ import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {getUpgradeEffect} from '../models/PrestigeUpgrade';
 import {eventBus, GameEvents} from '../core/EventBus';
 import {SpecialEffectsSystem} from './SpecialEffectsSystem';
+import {
+  calculateWaveTimer as calculateWaveTimerFormula,
+  calculateBossWaveTimer,
+  calculateWaveReward as calculateWaveRewardFormula,
+  isBossWave as isBossWaveFormula,
+  getWavesUntilBoss as getWavesUntilBossFormula,
+  getWaveDifficulty as getWaveDifficultyFormula,
+} from '../data/formulas';
 
 export interface WaveReward {
   scrap: number;
@@ -25,26 +33,10 @@ export interface FinalBossDrop {
   amount?: number;
 }
 
-export interface WaveConfig {
-  baseTimerSeconds: number;
-  timerBonusPerWave: number;
-  maxTimerSeconds: number;
-}
-
 export class WaveManager {
-  private config: WaveConfig;
-
-  constructor(config?: Partial<WaveConfig>) {
-    this.config = {
-      baseTimerSeconds: 20,
-      timerBonusPerWave: 0.2,
-      maxTimerSeconds: 60,
-      ...config,
-    };
-  }
-
   isBossWave(wave: number): boolean {
-    return wave > 0 && wave % BOSS_CONFIG.waveInterval === 0;
+    // Use centralized formula from src/data/formulas/progression.ts
+    return isBossWaveFormula(wave);
   }
 
   isFinalBoss(wave: number): boolean {
@@ -56,7 +48,8 @@ export class WaveManager {
   }
 
   getWavesUntilBoss(wave: number): number {
-    return BOSS_CONFIG.waveInterval - (wave % BOSS_CONFIG.waveInterval);
+    // Use centralized formula from src/data/formulas/progression.ts
+    return getWavesUntilBossFormula(wave);
   }
 
   spawnEnemyForWave(wave: number): Enemy {
@@ -97,11 +90,11 @@ export class WaveManager {
       return finalBoss.timerSeconds;
     }
 
-    const baseTimer = this.config.baseTimerSeconds + wave * this.config.timerBonusPerWave;
-    const timer = Math.min(baseTimer, this.config.maxTimerSeconds);
+    // Use centralized formula from src/data/formulas/progression.ts
+    const timer = calculateWaveTimerFormula(wave);
 
     if (this.isBossWave(wave)) {
-      return timer * BOSS_CONFIG.timerMultiplier;
+      return calculateBossWaveTimer(timer);
     }
 
     return timer;
@@ -113,32 +106,19 @@ export class WaveManager {
     prestigeRewardBonus: number = 1,
     boostMultiplier: number = 1,
   ): WaveReward {
-    const baseScrap = enemyReward;
-
-    // Wave completion bonus: reduced scaling for slower progression
-    // Base bonus of 50x wave number plus gentle polynomial scaling
-    const waveBonus = Math.floor(wave * 50 + Math.pow(wave, 1.5));
-
-    // Additional wave completion multiplier (25% per 20 waves, capped at 5x)
-    const waveMultiplier = Math.min(5, 1 + Math.floor(wave / 20) * 0.25);
-
-    // Calculate bonus scrap from wave completion (wave bonus * wave multiplier)
-    const bonusScrap = Math.floor(waveBonus * waveMultiplier);
-
-    // Apply prestige and boost multipliers only once to the total
-    const totalScrap = Math.floor(
-      (baseScrap + bonusScrap) * prestigeRewardBonus * boostMultiplier,
+    // Use centralized formula from src/data/formulas/progression.ts
+    const result = calculateWaveRewardFormula(
+      enemyReward,
+      wave,
+      prestigeRewardBonus,
+      boostMultiplier,
     );
 
     return {
-      scrap: baseScrap,
-      bonusScrap,
-      totalScrap,
+      scrap: result.baseScrap,
+      bonusScrap: result.bonusScrap,
+      totalScrap: result.totalScrap,
     };
-  }
-
-  calculateProductionBonus(wave: number): number {
-    return 1 + Math.log10(wave + 1) * 0.5;
   }
 
   getPrestigeRewardBonus(prestigeUpgradeLevels: Map<string, number>): number {
@@ -223,11 +203,8 @@ export class WaveManager {
   }
 
   getWaveDifficulty(wave: number): string {
-    if (wave <= 10) return 'Easy';
-    if (wave <= 25) return 'Normal';
-    if (wave <= 50) return 'Hard';
-    if (wave <= 100) return 'Expert';
-    return 'Insane';
+    // Use centralized formula from src/data/formulas/progression.ts
+    return getWaveDifficultyFormula(wave);
   }
 
   getWaveProgress(wave: number): {tier: string; progress: number} {

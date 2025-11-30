@@ -95,22 +95,6 @@ describe('WaveManager', () => {
     });
   });
 
-  describe('calculateProductionBonus', () => {
-    it('returns positive bonus', () => {
-      const bonus = manager.calculateProductionBonus(1);
-      expect(bonus).toBeGreaterThan(0);
-    });
-
-    it('increases with wave', () => {
-      const bonus1 = manager.calculateProductionBonus(1);
-      const bonus50 = manager.calculateProductionBonus(50);
-      const bonus100 = manager.calculateProductionBonus(100);
-
-      expect(bonus50).toBeGreaterThan(bonus1);
-      expect(bonus100).toBeGreaterThan(bonus50);
-    });
-  });
-
   describe('startWave', () => {
     it('spawns enemy and sets combat state', () => {
       const combat = createMockCombatState();
