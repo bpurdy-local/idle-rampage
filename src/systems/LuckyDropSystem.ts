@@ -59,14 +59,10 @@ export class LuckyDropSystem {
     return LUCKY_DROPS[0];
   }
 
-  private calculateAmount(drop: LuckyDrop, wave: number): number {
+  private calculateAmount(drop: LuckyDrop, _wave: number): number {
     const baseAmount =
       Math.floor(Math.random() * (drop.maxAmount - drop.minAmount + 1)) +
       drop.minAmount;
-
-    if (drop.type === 'blueprints' && wave >= 50) {
-      return Math.min(baseAmount + 1, drop.maxAmount + 1);
-    }
 
     return baseAmount;
   }

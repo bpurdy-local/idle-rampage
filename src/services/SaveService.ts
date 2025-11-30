@@ -181,9 +181,8 @@ export class SaveService {
       {id: 'scrap_works_1', typeId: 'scrap_works', unlockWave: 1},
       {id: 'turret_station_1', typeId: 'turret_station', unlockWave: 3},
       {id: 'training_facility_1', typeId: 'training_facility', unlockWave: 5},
-      {id: 'salvage_yard_1', typeId: 'salvage_yard', unlockWave: 8},
-      {id: 'engineering_bay_1', typeId: 'engineering_bay', unlockWave: 12},
-      {id: 'command_center_1', typeId: 'command_center', unlockWave: 25},
+      {id: 'engineering_bay_1', typeId: 'engineering_bay', unlockWave: 10},
+      {id: 'command_center_1', typeId: 'command_center', unlockWave: 20},
     ];
 
     const existingBuildingIds = new Set(state.buildings.map(b => b.typeId));
@@ -193,6 +192,12 @@ export class SaveService {
     const defenseStationIndex = updatedBuildings.findIndex(b => b.typeId === 'defense_station');
     if (defenseStationIndex !== -1) {
       updatedBuildings.splice(defenseStationIndex, 1);
+    }
+
+    // Remove old salvage_yard if it exists (building was removed from game)
+    const salvageYardIndex = updatedBuildings.findIndex(b => b.typeId === 'salvage_yard');
+    if (salvageYardIndex !== -1) {
+      updatedBuildings.splice(salvageYardIndex, 1);
     }
 
     // Add any missing buildings

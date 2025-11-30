@@ -118,6 +118,99 @@ describe('Building Model', () => {
   });
 });
 
+describe('Building Cost Scaling (Balance Pacing Fix)', () => {
+  it('Scrap Works has 1.18x cost multiplier for reasonable upgrade costs', () => {
+    const scrapWorksType: BuildingType = {
+      id: 'scrap_works',
+      name: 'Scrap Collector',
+      description: 'Test',
+      role: 'production',
+      baseProduction: 1,
+      baseCost: 75,
+      costMultiplier: 1.18,
+      maxBuilders: 50,
+      unlockWave: 1,
+      iconName: 'cog',
+      color: '#8B4513',
+    };
+
+    const costLevel1 = calculateUpgradeCost(scrapWorksType, 1);
+    const costLevel10 = calculateUpgradeCost(scrapWorksType, 10);
+    const costLevel25 = calculateUpgradeCost(scrapWorksType, 25);
+    const costLevel50 = calculateUpgradeCost(scrapWorksType, 50);
+
+    expect(costLevel1).toBe(75);
+    expect(costLevel10).toBeLessThan(400); // With 1.18x multiplier
+    expect(costLevel25).toBeLessThan(5000); // Reasonable scaling
+    expect(costLevel50).toBeLessThan(350000); // Still manageable
+  });
+
+  it('Turret Station has 1.20x cost multiplier', () => {
+    const turretType: BuildingType = {
+      id: 'turret_station',
+      name: 'Turret Bay',
+      description: 'Test',
+      role: 'combat',
+      baseProduction: 0.5,
+      baseCost: 200,
+      costMultiplier: 1.20,
+      maxBuilders: 50,
+      unlockWave: 3,
+      iconName: 'crosshairs',
+      color: '#DC143C',
+    };
+
+    const costLevel1 = calculateUpgradeCost(turretType, 1);
+    const costLevel50 = calculateUpgradeCost(turretType, 50);
+
+    expect(costLevel1).toBe(200);
+    expect(costLevel50).toBeLessThan(2000000); // Reasonable cost at level 50
+  });
+
+  it('Command Center has 1.30x cost multiplier', () => {
+    const commandType: BuildingType = {
+      id: 'command_center',
+      name: 'Outpost',
+      description: 'Test',
+      role: 'utility',
+      baseProduction: 0.15,
+      baseCost: 75000,
+      costMultiplier: 1.30,
+      maxBuilders: 0,
+      unlockWave: 20,
+      iconName: 'flag',
+      color: '#708090',
+    };
+
+    const costLevel1 = calculateUpgradeCost(commandType, 1);
+    const costLevel10 = calculateUpgradeCost(commandType, 10);
+
+    expect(costLevel1).toBe(75000);
+    expect(costLevel10).toBeLessThan(1000000); // With 1.30x multiplier
+  });
+
+  it('upgrade costs stay economically viable at high levels', () => {
+    const scrapWorksType: BuildingType = {
+      id: 'scrap_works',
+      name: 'Scrap Collector',
+      description: 'Test',
+      role: 'production',
+      baseProduction: 1,
+      baseCost: 75,
+      costMultiplier: 1.18,
+      maxBuilders: 50,
+      unlockWave: 1,
+      iconName: 'cog',
+      color: '#8B4513',
+    };
+
+    // At level 50, cost should be reasonable, not billions
+    const costLevel50 = calculateUpgradeCost(scrapWorksType, 50);
+    expect(costLevel50).toBeLessThan(350000);
+    expect(costLevel50).toBeGreaterThan(1000);
+  });
+});
+
 describe('WorkerEfficiency', () => {
   describe('calculateTotalWorkerEfficiency', () => {
     it('returns 0 for 0 workers', () => {

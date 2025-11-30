@@ -18,6 +18,7 @@ const createMockPlayer = (overrides: Partial<PlayerState> = {}): PlayerState => 
   },
   prestigeUpgrades: {},
   activeBoosts: [],
+  buildersPurchased: 0,
   ...overrides,
 });
 
@@ -173,13 +174,29 @@ describe('PrestigeSystem', () => {
 
   describe('getStartingScrap', () => {
     it('returns 0 with no upgrades', () => {
-      const scrap = system.getStartingScrap({});
+      const scrap = system.getStartingScrap({}, 100);
       expect(scrap).toBe(0);
     });
 
-    it('adds bonus from starting_scrap upgrade', () => {
-      const scrap = system.getStartingScrap({starting_scrap: 2});
-      expect(scrap).toBeGreaterThan(0);
+    it('returns 0 with upgrade but no wave progress', () => {
+      const scrap = system.getStartingScrap({starting_scrap: 2}, 0);
+      expect(scrap).toBe(0);
+    });
+
+    it('adds bonus from starting_scrap upgrade with wave scaling', () => {
+      // Formula: highestWave * 50 * upgradeLevel
+      // With wave 100, level 2: 100 * 50 * 2 = 10,000
+      const scrap = system.getStartingScrap({starting_scrap: 2}, 100);
+      expect(scrap).toBe(10000);
+    });
+
+    it('scales with highest wave reached', () => {
+      const scrap50 = system.getStartingScrap({starting_scrap: 1}, 50);
+      const scrap100 = system.getStartingScrap({starting_scrap: 1}, 100);
+      // wave 50: 50 * 50 * 1 = 2,500
+      // wave 100: 100 * 50 * 1 = 5,000
+      expect(scrap50).toBe(2500);
+      expect(scrap100).toBe(5000);
     });
   });
 
@@ -300,6 +317,105 @@ describe('PrestigeSystem', () => {
       const newState = system.createPostPrestigeState(player, 50, 30);
 
       expect(newState.totalBlueprintsEarned).toBe(150);
+    });
+
+    it('preserves buildersPurchased count', () => {
+      const player = createMockPlayer({buildersPurchased: 15});
+      const newState = system.createPostPrestigeState(player, 50, 30);
+
+      expect(newState.buildersPurchased).toBe(15);
+    });
+  });
+
+  describe('blueprint calculation with updated constants', () => {
+    it('returns exactly 100 blueprints for wave 100', () => {
+      expect(system.calculateBlueprintsEarned(100)).toBe(100);
+    });
+
+    it('adds 10 blueprints base per wave above 100', () => {
+      const bp100 = system.calculateBlueprintsEarned(100);
+      const bp101 = system.calculateBlueprintsEarned(101);
+      // First wave above 100 adds 10 * 1.10^0 = 10
+      expect(bp101).toBe(bp100 + 10);
+    });
+
+    it('scales blueprints with 1.10 multiplier per wave', () => {
+      const bp100 = system.calculateBlueprintsEarned(100);
+      const bp105 = system.calculateBlueprintsEarned(105);
+      // Should be significantly more than 100 + (5 * 10) due to scaling
+      expect(bp105).toBeGreaterThan(bp100 + 50);
+    });
+  });
+
+  describe('getBuilderPurchaseCost', () => {
+    it('returns 30 for first 5 builders', () => {
+      expect(system.getBuilderPurchaseCost(0)).toBe(30);
+      expect(system.getBuilderPurchaseCost(1)).toBe(30);
+      expect(system.getBuilderPurchaseCost(4)).toBe(30);
+    });
+
+    it('returns 50 for builders 5-9', () => {
+      expect(system.getBuilderPurchaseCost(5)).toBe(50);
+      expect(system.getBuilderPurchaseCost(9)).toBe(50);
+    });
+
+    it('returns 75 for builders 10-19', () => {
+      expect(system.getBuilderPurchaseCost(10)).toBe(75);
+      expect(system.getBuilderPurchaseCost(19)).toBe(75);
+    });
+
+    it('returns 100 for builders 20+', () => {
+      expect(system.getBuilderPurchaseCost(20)).toBe(100);
+      expect(system.getBuilderPurchaseCost(50)).toBe(100);
+    });
+  });
+
+  describe('canAffordBuilder', () => {
+    it('returns true when player has enough blueprints', () => {
+      expect(system.canAffordBuilder(100, 0)).toBe(true); // Needs 30
+      expect(system.canAffordBuilder(50, 5)).toBe(true); // Needs 50
+    });
+
+    it('returns false when player cannot afford', () => {
+      expect(system.canAffordBuilder(29, 0)).toBe(false); // Needs 30
+      expect(system.canAffordBuilder(49, 5)).toBe(false); // Needs 50
+    });
+
+    it('returns true when player has exactly enough', () => {
+      expect(system.canAffordBuilder(30, 0)).toBe(true);
+      expect(system.canAffordBuilder(50, 5)).toBe(true);
+      expect(system.canAffordBuilder(75, 10)).toBe(true);
+      expect(system.canAffordBuilder(100, 20)).toBe(true);
+    });
+  });
+
+  describe('purchaseBuilder', () => {
+    it('succeeds when player can afford', () => {
+      const result = system.purchaseBuilder(100, 0);
+      expect(result.success).toBe(true);
+      expect(result.cost).toBe(30);
+      expect(result.remainingBlueprints).toBe(70);
+    });
+
+    it('fails when player cannot afford', () => {
+      const result = system.purchaseBuilder(20, 0);
+      expect(result.success).toBe(false);
+      expect(result.cost).toBe(30);
+      expect(result.remainingBlueprints).toBe(20);
+    });
+
+    it('uses escalating cost based on buildersPurchased', () => {
+      const result1 = system.purchaseBuilder(100, 0);
+      expect(result1.cost).toBe(30);
+
+      const result2 = system.purchaseBuilder(100, 5);
+      expect(result2.cost).toBe(50);
+
+      const result3 = system.purchaseBuilder(100, 10);
+      expect(result3.cost).toBe(75);
+
+      const result4 = system.purchaseBuilder(100, 20);
+      expect(result4.cost).toBe(100);
     });
   });
 });

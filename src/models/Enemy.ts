@@ -46,5 +46,6 @@ export const createEnemy = (tier: EnemyTier, wave: number): Enemy => {
 };
 
 export const getEnemyHealthPercentage = (enemy: Enemy): number => {
+  if (enemy.maxHealth <= 0) return 0;
   return (enemy.currentHealth / enemy.maxHealth) * 100;
 };

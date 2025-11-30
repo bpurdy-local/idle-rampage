@@ -6,12 +6,15 @@ import {eventBus} from '../../src/core/EventBus';
 jest.mock('react-native-iap', () => ({
   initConnection: jest.fn(),
   endConnection: jest.fn(),
-  fetchProducts: jest.fn(),
+  getProducts: jest.fn(),
   requestPurchase: jest.fn(),
   finishTransaction: jest.fn(),
   purchaseUpdatedListener: jest.fn(() => ({remove: jest.fn()})),
   purchaseErrorListener: jest.fn(() => ({remove: jest.fn()})),
   getAvailablePurchases: jest.fn(),
+  ErrorCode: {
+    E_USER_CANCELLED: 'E_USER_CANCELLED',
+  },
 }));
 
 // Mock react-native Platform
@@ -91,7 +94,7 @@ describe('IAPService', () => {
   describe('loadProducts', () => {
     it('loads products from store', async () => {
       mockedRNIap.initConnection.mockResolvedValue(true as any);
-      mockedRNIap.fetchProducts.mockResolvedValue([
+      mockedRNIap.getProducts.mockResolvedValue([
         {
           productId: 'builder_pack_small',
           localizedPrice: '$0.99',
@@ -103,7 +106,7 @@ describe('IAPService', () => {
       const products = await service.loadProducts();
 
       expect(products.length).toBeGreaterThan(0);
-      expect(mockedRNIap.fetchProducts).toHaveBeenCalled();
+      expect(mockedRNIap.getProducts).toHaveBeenCalled();
       expect(eventSpy).toHaveBeenCalledWith(
         IAPEvents.PRODUCTS_LOADED,
         expect.any(Object),
@@ -112,7 +115,7 @@ describe('IAPService', () => {
 
     it('returns base products on error', async () => {
       mockedRNIap.initConnection.mockResolvedValue(true as any);
-      mockedRNIap.fetchProducts.mockRejectedValue(new Error('Store unavailable'));
+      mockedRNIap.getProducts.mockRejectedValue(new Error('Store unavailable'));
 
       const products = await service.loadProducts();
 
@@ -147,9 +150,9 @@ describe('IAPService', () => {
 
       expect(result.success).toBe(true);
       expect(result.productId).toBe('builder_pack_small');
+      // iOS uses {sku: productId} format
       expect(mockedRNIap.requestPurchase).toHaveBeenCalledWith({
-        request: { ios: { sku: 'builder_pack_small' } },
-        type: 'in-app',
+        sku: 'builder_pack_small',
       });
     });
 

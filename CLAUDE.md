@@ -89,7 +89,7 @@ tests/              # Jest tests mirroring src/ structure
 
 ## Game Content
 
-### Buildings (6 types with evolution tiers)
+### Buildings (5 types with evolution tiers)
 Each building evolves through multiple tiers as you progress through waves.
 
 | Building | Role | Base Unlock | Tiers | Purpose |
@@ -98,7 +98,6 @@ Each building evolves through multiple tiers as you progress through waves.
 | Turret Station | combat | Wave 3 | 5 | Auto-damage (Turret Bay → Gun Emplacement → Weapons Lab → War Factory → Doom Fortress) |
 | Training Facility | combat | Wave 5 | 5 | Tap damage boost |
 | Command Center | utility | Wave 25 | 4 | Global production boost (5-20%) |
-| Salvage Yard | utility | Wave 8 | 5 | Bonus scrap from defeated enemies |
 | Engineering Bay | utility | Wave 12 | 5 | Reduces upgrade costs (max 50%)
 
 ### Enemy Tiers (5 difficulty levels)

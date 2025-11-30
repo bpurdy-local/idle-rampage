@@ -2,7 +2,7 @@ import {Platform} from 'react-native';
 import {
   initConnection,
   endConnection,
-  fetchProducts,
+  getProducts,
   requestPurchase,
   finishTransaction,
   purchaseUpdatedListener,
@@ -117,7 +117,7 @@ export class IAPService {
 
     this.purchaseErrorSubscription = purchaseErrorListener(
       (error: PurchaseError) => {
-        const isCancelled = error.code === ErrorCode.UserCancelled ||
+        const isCancelled = error.code === ErrorCode.E_USER_CANCELLED ||
                            error.message?.includes('cancelled') ||
                            error.message?.includes('canceled');
 
@@ -153,15 +153,14 @@ export class IAPService {
 
     try {
       const productIds = IAP_PRODUCTS.map(p => p.id);
-      const storeProducts = await fetchProducts({skus: productIds});
+      const storeProducts = await getProducts({skus: productIds});
 
       this.products.clear();
       if (storeProducts) {
         for (const product of storeProducts) {
-          // In react-native-iap v14+, products use 'id' and 'displayPrice'
-          this.products.set(product.id, {
-            productId: product.id,
-            localizedPrice: product.displayPrice,
+          this.products.set(product.productId, {
+            productId: product.productId,
+            localizedPrice: product.localizedPrice,
             price: product.price?.toString(),
             currency: product.currency,
           });
@@ -208,12 +207,11 @@ export class IAPService {
 
     try {
       // Use platform-specific request format for react-native-iap v14+
-      await requestPurchase({
-        request: Platform.OS === 'ios'
-          ? { ios: { sku: productId } }
-          : { android: { skus: [productId] } },
-        type: 'in-app',
-      });
+      if (Platform.OS === 'ios') {
+        await requestPurchase({sku: productId});
+      } else {
+        await requestPurchase({skus: [productId]});
+      }
 
       // The actual result comes through the listener
       return {

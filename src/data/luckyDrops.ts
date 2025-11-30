@@ -11,6 +11,7 @@ export interface LuckyDrop {
   maxAmount: number;
   boostType?: string;
   boostDuration?: number;
+  boostMultiplier?: number;
 }
 
 export const LUCKY_DROPS: LuckyDrop[] = [
@@ -24,29 +25,32 @@ export const LUCKY_DROPS: LuckyDrop[] = [
     maxAmount: 5,
   },
   {
-    id: 'blueprint_drop',
-    name: 'Blueprint',
-    type: 'blueprints',
-    rarity: 'uncommon',
-    weight: 30,
-    minAmount: 1,
-    maxAmount: 3,
-  },
-  {
     id: 'boost_2x',
     name: '2x Boost',
+    type: 'boost',
+    rarity: 'uncommon',
+    weight: 35,
+    minAmount: 1,
+    maxAmount: 1,
+    boostType: 'all',
+    boostDuration: 30,
+  },
+  {
+    id: 'mega_boost',
+    name: 'Mega Boost',
     type: 'boost',
     rarity: 'rare',
     weight: 15,
     minAmount: 1,
     maxAmount: 1,
     boostType: 'all',
-    boostDuration: 30,
+    boostDuration: 60,
+    boostMultiplier: 3,
   },
 ];
 
 export const DROP_CONFIG = {
-  baseDropChance: 0.75, // 75% chance for testing (was 0.25 / 25%)
+  baseDropChance: 0.20, // 20% chance per wave clear
   minWaveForDrops: 1,
 };
 

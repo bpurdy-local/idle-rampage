@@ -31,6 +31,8 @@ interface BuildingCardProps {
   nextEvolutionWave?: number;
   /** If true, this building doesn't use workers (static effect building) */
   noWorkers?: boolean;
+  /** The building's unique typeId for role-specific display */
+  buildingTypeId?: string;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -51,9 +53,32 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   evolutionTier,
   nextEvolutionWave,
   noWorkers = false,
+  buildingTypeId,
 }) => {
   const canAssign = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   const canUnassign = !noWorkers && building.assignedBuilders > 0;
+
+  // Get role-appropriate output label and formatted value
+  const getOutputDisplay = (): {label: string; value: string} => {
+    switch (buildingTypeId) {
+      case 'scrap_works':
+        return {label: 'Scrap', value: `${formatNumber(production)}/s`};
+      case 'turret_station':
+        return {label: 'Auto DPS', value: formatNumber(production)};
+      case 'training_facility':
+        return {label: 'Tap Bonus', value: `+${formatNumber(production)}`};
+      case 'command_center':
+        // production is already the percentage (e.g., 0.15 for 15%)
+        return {label: 'Boost', value: `+${Math.round(production * 100)}%`};
+      case 'engineering_bay':
+        // production is already the percentage (e.g., 0.10 for 10%)
+        return {label: 'Discount', value: `-${Math.round(production * 100)}%`};
+      default:
+        return {label: 'Output', value: `${formatNumber(production)}/s`};
+    }
+  };
+
+  const outputDisplay = getOutputDisplay();
 
   // Get tiered building name and color based on prestige
   const tieredName = getTieredBuildingName(buildingType.name, prestigeCount);
@@ -208,8 +233,8 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
       <View style={styles.stats}>
         {noWorkers ? (
           <View style={styles.stat}>
-            <Text style={styles.statLabel}>Effect</Text>
-            <Text style={styles.statValue}>Static Bonus</Text>
+            <Text style={styles.statLabel}>Type</Text>
+            <Text style={styles.statValue}>Static Effect</Text>
           </View>
         ) : (
           <View style={styles.stat}>
@@ -220,8 +245,8 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
           </View>
         )}
         <View style={styles.stat}>
-          <Text style={styles.statLabel}>Output</Text>
-          <Text style={styles.statValue}>{formatNumber(production)}/s</Text>
+          <Text style={styles.statLabel}>{outputDisplay.label}</Text>
+          <Text style={styles.statValue}>{outputDisplay.value}</Text>
         </View>
       </View>
 

@@ -9,6 +9,7 @@ const createMockCombatState = (): CombatState => ({
   autoDamagePerTick: 1,
   burstChance: 0.05,
   burstMultiplier: 5,
+  baseTapDamage: 10,
 });
 
 describe('WaveManager', () => {
@@ -50,7 +51,7 @@ describe('WaveManager', () => {
   describe('calculateWaveTimer', () => {
     it('returns base timer for wave 1', () => {
       const timer = manager.calculateWaveTimer(1);
-      expect(timer).toBeGreaterThanOrEqual(15);
+      expect(timer).toBeGreaterThanOrEqual(20);
     });
 
     it('increases timer with wave', () => {
@@ -60,13 +61,13 @@ describe('WaveManager', () => {
     });
 
     it('caps at max timer for non-boss waves', () => {
-      const timer = manager.calculateWaveTimer(999); // Non-boss wave
-      expect(timer).toBeLessThanOrEqual(45);
+      const timer = manager.calculateWaveTimer(251); // Non-boss wave past max (not divisible by 10)
+      expect(timer).toBeLessThanOrEqual(60);
     });
 
     it('allows boss waves to exceed normal max (with 1.5x multiplier)', () => {
-      const timer = manager.calculateWaveTimer(1000); // Boss wave
-      expect(timer).toBeLessThanOrEqual(67.5); // 45 * 1.5
+      const timer = manager.calculateWaveTimer(90); // Boss wave
+      expect(timer).toBeLessThanOrEqual(90); // 60 * 1.5
     });
   });
 
@@ -235,16 +236,23 @@ describe('WaveManager', () => {
       expect(enemy.isBoss).toBe(true);
     });
 
-    it('spawns boss with 3x health', () => {
-      const regularEnemy = manager.spawnEnemyForWave(9);
+    it('spawns boss with 2x health multiplier (compared to same-wave regular)', () => {
+      // Compare wave 10 boss to what wave 10 would be without boss multiplier
+      // Boss HP = regularHP * 2.0, where regularHP already includes wave scaling
       const bossEnemy = manager.spawnEnemyForWave(10);
-      expect(bossEnemy.maxHealth).toBeGreaterThan(regularEnemy.maxHealth * 2.5);
+      // Wave 10 regular HP: 200 * 1.50^9 = ~7688
+      // Boss HP should be ~7688 * 2.0 = ~15376
+      expect(bossEnemy.maxHealth).toBeGreaterThan(12000);
+      expect(bossEnemy.maxHealth).toBeLessThan(20000);
+      expect(bossEnemy.isBoss).toBe(true);
     });
 
-    it('spawns boss with 5x reward', () => {
-      const regularEnemy = manager.spawnEnemyForWave(9);
+    it('spawns boss with 4x reward multiplier', () => {
       const bossEnemy = manager.spawnEnemyForWave(10);
-      expect(bossEnemy.reward).toBeGreaterThan(regularEnemy.reward * 4);
+      // Wave 10 regular reward: 10 * 1.15^9 = ~35
+      // Boss reward should be ~35 * 4 = ~140
+      expect(bossEnemy.reward).toBeGreaterThan(120);
+      expect(bossEnemy.reward).toBeLessThan(160);
     });
 
     it('spawns boss with Alpha in name', () => {
@@ -263,12 +271,82 @@ describe('WaveManager', () => {
       const regularTimer = manager.calculateWaveTimer(9);
       const bossTimer = manager.calculateWaveTimer(10);
       expect(bossTimer).toBeGreaterThan(regularTimer * 1.4);
+      expect(bossTimer).toBeLessThan(regularTimer * 1.6);
     });
 
     it('does not extend timer for regular waves', () => {
       const timer5 = manager.calculateWaveTimer(5);
       const timer6 = manager.calculateWaveTimer(6);
       expect(timer6 - timer5).toBeLessThan(1);
+    });
+  });
+
+  describe('final boss waves (96-100)', () => {
+    it('detects final boss waves correctly', () => {
+      expect(manager.isFinalBoss(95)).toBe(false);
+      expect(manager.isFinalBoss(96)).toBe(true);
+      expect(manager.isFinalBoss(97)).toBe(true);
+      expect(manager.isFinalBoss(98)).toBe(true);
+      expect(manager.isFinalBoss(99)).toBe(true);
+      expect(manager.isFinalBoss(100)).toBe(true);
+      expect(manager.isFinalBoss(101)).toBe(false);
+    });
+
+    it('spawns final boss with correct stats for wave 96', () => {
+      const enemy = manager.spawnEnemyForWave(96);
+      expect(enemy.name).toBe('Sentinel Prime');
+      expect(enemy.maxHealth).toBe(500000);
+      expect(enemy.reward).toBe(100000);
+      expect(enemy.isBoss).toBe(true);
+    });
+
+    it('spawns final boss with correct stats for wave 100', () => {
+      const enemy = manager.spawnEnemyForWave(100);
+      expect(enemy.name).toBe('The Architect');
+      expect(enemy.maxHealth).toBe(2500000);
+      expect(enemy.reward).toBe(500000);
+      expect(enemy.isBoss).toBe(true);
+    });
+
+    it('uses fixed timer for final bosses', () => {
+      expect(manager.calculateWaveTimer(96)).toBe(120);
+      expect(manager.calculateWaveTimer(97)).toBe(120);
+      expect(manager.calculateWaveTimer(98)).toBe(150);
+      expect(manager.calculateWaveTimer(99)).toBe(150);
+      expect(manager.calculateWaveTimer(100)).toBe(180);
+    });
+
+    it('returns boost drop for waves 96-99', () => {
+      const drop96 = manager.getFinalBossDrop(96);
+      expect(drop96).not.toBeNull();
+      expect(drop96?.type).toBe('boost');
+      expect(drop96?.multiplier).toBe(2);
+      expect(drop96?.duration).toBe(60);
+
+      const drop99 = manager.getFinalBossDrop(99);
+      expect(drop99?.type).toBe('boost');
+      expect(drop99?.multiplier).toBe(3);
+      expect(drop99?.duration).toBe(90);
+    });
+
+    it('returns blueprint drop for wave 100', () => {
+      const drop = manager.getFinalBossDrop(100);
+      expect(drop).not.toBeNull();
+      expect(drop?.type).toBe('blueprints');
+      expect(drop?.amount).toBe(25);
+    });
+
+    it('returns null for non-final-boss waves', () => {
+      expect(manager.getFinalBossDrop(95)).toBeNull();
+      expect(manager.getFinalBossDrop(50)).toBeNull();
+      expect(manager.getFinalBossDrop(101)).toBeNull();
+    });
+
+    it('gets final boss data correctly', () => {
+      const boss = manager.getFinalBoss(100);
+      expect(boss).toBeDefined();
+      expect(boss?.name).toBe('The Architect');
+      expect(boss?.health).toBe(2500000);
     });
   });
 });

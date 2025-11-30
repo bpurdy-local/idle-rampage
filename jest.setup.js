@@ -15,14 +15,4 @@ jest.mock('react-native-iap', () => ({
   getAvailablePurchases: jest.fn(),
 }));
 
-// Mock react-native-reanimated
-jest.mock('react-native-reanimated', () => ({
-  default: {
-    call: () => {},
-  },
-  useSharedValue: jest.fn(() => ({value: 0})),
-  useAnimatedStyle: jest.fn(() => ({})),
-  withTiming: jest.fn((value) => value),
-  withSpring: jest.fn((value) => value),
-  runOnJS: jest.fn((fn) => fn),
-}));
+// react-native-reanimated mock is in __mocks__/react-native-reanimated.js

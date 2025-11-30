@@ -1,5 +1,11 @@
 import {CombatState, EnemyState} from '../core/GameState';
-import {getEnemyTierForWave, BOSS_CONFIG} from '../data/enemies';
+import {
+  getEnemyTierForWave,
+  BOSS_CONFIG,
+  isFinalBossWave,
+  getFinalBossForWave,
+  FinalBoss,
+} from '../data/enemies';
 import {createEnemy, Enemy} from '../models/Enemy';
 import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {getUpgradeEffect} from '../models/PrestigeUpgrade';
@@ -9,6 +15,13 @@ export interface WaveReward {
   scrap: number;
   bonusScrap: number;
   totalScrap: number;
+}
+
+export interface FinalBossDrop {
+  type: 'boost' | 'blueprints';
+  multiplier?: number;
+  duration?: number;
+  amount?: number;
 }
 
 export interface WaveConfig {
@@ -22,9 +35,9 @@ export class WaveManager {
 
   constructor(config?: Partial<WaveConfig>) {
     this.config = {
-      baseTimerSeconds: 15,
-      timerBonusPerWave: 0.1,
-      maxTimerSeconds: 45,
+      baseTimerSeconds: 20,
+      timerBonusPerWave: 0.2,
+      maxTimerSeconds: 60,
       ...config,
     };
   }
@@ -33,11 +46,33 @@ export class WaveManager {
     return wave > 0 && wave % BOSS_CONFIG.waveInterval === 0;
   }
 
+  isFinalBoss(wave: number): boolean {
+    return isFinalBossWave(wave);
+  }
+
+  getFinalBoss(wave: number): FinalBoss | undefined {
+    return getFinalBossForWave(wave);
+  }
+
   getWavesUntilBoss(wave: number): number {
     return BOSS_CONFIG.waveInterval - (wave % BOSS_CONFIG.waveInterval);
   }
 
   spawnEnemyForWave(wave: number): Enemy {
+    const finalBoss = getFinalBossForWave(wave);
+    if (finalBoss) {
+      return {
+        id: `enemy_${wave}_${Date.now()}_final`,
+        tierId: finalBoss.id,
+        name: finalBoss.name,
+        currentHealth: finalBoss.health,
+        maxHealth: finalBoss.health,
+        reward: finalBoss.reward,
+        wave,
+        isBoss: true,
+      };
+    }
+
     const tier = getEnemyTierForWave(wave);
     const baseEnemy = createEnemy(tier, wave);
 
@@ -56,6 +91,11 @@ export class WaveManager {
   }
 
   calculateWaveTimer(wave: number): number {
+    const finalBoss = getFinalBossForWave(wave);
+    if (finalBoss) {
+      return finalBoss.timerSeconds;
+    }
+
     const baseTimer = this.config.baseTimerSeconds + wave * this.config.timerBonusPerWave;
     const timer = Math.min(baseTimer, this.config.maxTimerSeconds);
 
@@ -74,12 +114,12 @@ export class WaveManager {
   ): WaveReward {
     const baseScrap = enemyReward;
 
-    // Wave completion bonus: very generous scaling with wave number
-    // Base bonus of 500x wave number plus strong exponential scaling
-    const waveBonus = Math.floor(wave * 500 + Math.pow(wave, 2.2));
+    // Wave completion bonus: reduced scaling for slower progression
+    // Base bonus of 50x wave number plus gentle polynomial scaling
+    const waveBonus = Math.floor(wave * 50 + Math.pow(wave, 1.5));
 
-    // Additional wave completion multiplier (50% per 10 waves, capped at 10x)
-    const waveMultiplier = Math.min(10, 1 + Math.floor(wave / 10) * 0.5);
+    // Additional wave completion multiplier (25% per 20 waves, capped at 5x)
+    const waveMultiplier = Math.min(5, 1 + Math.floor(wave / 20) * 0.25);
 
     // Calculate bonus scrap from wave completion (wave bonus * wave multiplier)
     const bonusScrap = Math.floor(waveBonus * waveMultiplier);
@@ -149,6 +189,18 @@ export class WaveManager {
     combat.currentEnemy = null;
 
     eventBus.emit(GameEvents.WAVE_FAILED, {wave});
+  }
+
+  getFinalBossDrop(wave: number): FinalBossDrop | null {
+    const finalBoss = getFinalBossForWave(wave);
+    if (!finalBoss) return null;
+
+    return {
+      type: finalBoss.guaranteedDrop.type,
+      multiplier: finalBoss.guaranteedDrop.multiplier,
+      duration: finalBoss.guaranteedDrop.duration,
+      amount: finalBoss.guaranteedDrop.amount,
+    };
   }
 
   getWaveDifficulty(wave: number): string {

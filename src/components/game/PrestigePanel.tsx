@@ -24,8 +24,14 @@ interface PrestigePanelProps {
   blueprintsToEarn: number;
   prestigeRequirement: number;
   upgrades: PrestigeUpgradeItem[];
+  // Builder purchase props
+  totalBuilders: number;
+  maxBuilders: number;
+  builderCost: number;
+  canAffordBuilder: boolean;
   onPrestige: () => void;
   onPurchaseUpgrade: (upgradeId: string) => void;
+  onPurchaseBuilder: () => void;
   onClose: () => void;
 }
 
@@ -37,10 +43,16 @@ export const PrestigePanel: React.FC<PrestigePanelProps> = ({
   blueprintsToEarn,
   prestigeRequirement,
   upgrades,
+  totalBuilders,
+  maxBuilders,
+  builderCost,
+  canAffordBuilder,
   onPrestige,
   onPurchaseUpgrade,
+  onPurchaseBuilder,
   onClose,
 }) => {
+  const isAtMaxBuilders = totalBuilders >= maxBuilders;
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -88,6 +100,33 @@ export const PrestigePanel: React.FC<PrestigePanelProps> = ({
           <Text style={styles.notReadyText}>
             Reach wave {prestigeRequirement} to prestige
           </Text>
+        )}
+      </Card>
+
+      <Card style={styles.builderCard}>
+        <View style={styles.builderHeader}>
+          <Text style={styles.sectionTitle}>Buy Builders</Text>
+          <Text style={styles.builderCount}>
+            {totalBuilders}/{maxBuilders}
+          </Text>
+        </View>
+        <Text style={styles.builderDesc}>
+          Permanently increase your builder pool
+        </Text>
+        {isAtMaxBuilders ? (
+          <Text style={styles.maxedText}>MAX BUILDERS</Text>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.buyBtn,
+              !canAffordBuilder && styles.buyBtnDisabled,
+            ]}
+            onPress={onPurchaseBuilder}
+            disabled={!canAffordBuilder}>
+            <Text style={styles.buyBtnText}>
+              +1 Builder for {formatNumber(builderCost)} BP
+            </Text>
+          </TouchableOpacity>
         )}
       </Card>
 
@@ -197,6 +236,25 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
     textAlign: 'center',
+  },
+  builderCard: {
+    marginBottom: 16,
+  },
+  builderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  builderCount: {
+    color: '#9c27b0',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  builderDesc: {
+    color: '#888',
+    fontSize: 12,
+    marginBottom: 8,
   },
   upgradeList: {
     flex: 1,

@@ -45,11 +45,18 @@ export function useGameTick({
       const prestigeBonuses = prestigeSystem.calculateBonuses(player.prestigeUpgrades);
       const tierMultiplier = PRESTIGE_TIERS[player.buildingTier]?.multiplier ?? 1;
 
+      // Calculate combined boost multiplier from active boosts (multiplicative, capped at 10x)
+      const rawBoostMultiplier = player.activeBoosts.reduce(
+        (total, boost) => total * boost.multiplier,
+        1,
+      );
+      const boostMultiplier = Math.min(10, rawBoostMultiplier);
+
       // === Production Tick ===
       const productionBonuses = {
         waveBonus: productionSystem.calculateWaveBonus(currentWave),
         prestigeBonus: prestigeBonuses.productionMultiplier,
-        boostMultiplier: 1,
+        boostMultiplier,
         commandCenterBonus: productionSystem.calculateCommandCenterBonus(buildings),
         tierMultiplier,
       };
@@ -62,6 +69,11 @@ export function useGameTick({
         state.setScrap(player.scrap + scrapGain);
       }
 
+      // === Tick Active Boosts (decrement duration) ===
+      if (player.activeBoosts.length > 0) {
+        state.tickBoosts(deltaMs);
+      }
+
       // === Combat Tick ===
       if (combat.isActive && combat.currentEnemy) {
         handleCombatTick(
@@ -71,6 +83,7 @@ export function useGameTick({
           buildings,
           currentWave,
           tierMultiplier,
+          boostMultiplier,
           prestigeBonuses,
           combatSystem,
           waveManager,
@@ -111,6 +124,7 @@ function handleCombatTick(
   buildings: ReturnType<typeof useGameStore.getState>['buildings'],
   currentWave: number,
   tierMultiplier: number,
+  boostMultiplier: number,
   prestigeBonuses: ReturnType<PrestigeSystem['calculateBonuses']>,
   combatSystem: CombatSystem,
   waveManager: WaveManager,
@@ -145,11 +159,11 @@ function handleCombatTick(
       prestigeTapPower: prestigeBonuses.tapPowerMultiplier,
       prestigeBurstChance: prestigeBonuses.burstChanceBonus,
       prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
-      boostMultiplier: 1,
+      boostMultiplier,
       tierMultiplier,
     },
     deltaMs,
-    prestigeBonuses.waveRewardsMultiplier * debugScrapMultiplier,
+    prestigeBonuses.waveRewardsMultiplier * debugScrapMultiplier * boostMultiplier,
   );
 
   // Add scrap earned from auto-damage

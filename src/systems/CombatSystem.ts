@@ -30,8 +30,14 @@ export interface CombatTickResult {
   scrapFromDamage: number;
 }
 
-// What percentage of the enemy's reward is earned via damage (rest at wave completion)
-export const DAMAGE_SCRAP_PERCENT = 0.5; // 50% from damage, 50% from wave completion
+/**
+ * INTENTIONAL DESIGN: 50/50 split between damage-based and wave-completion scrap.
+ * This creates balanced incentives:
+ * - 50% from damage: Rewards maximizing DPS and active play
+ * - 50% from wave completion: Rewards finishing waves efficiently
+ * Evaluated alternatives (30/70, 70/30) but 50/50 provides best balance.
+ */
+export const DAMAGE_SCRAP_PERCENT = 0.5;
 
 export class CombatSystem {
   calculateAutoDamage(
@@ -263,11 +269,22 @@ export class CombatSystem {
       return getUpgradeEffect(upgrade, level);
     };
 
+    // For burst_chance: getUpgradeEffect returns 1 at level 0, or (0.05 + 0.01*level) at level 1+
+    // We need 0 bonus at level 0, and the effect value minus baseline (1) at level 1+
+    const burstChanceEffect = getBonusForType('burst_chance');
+    // At level 0, effect is 1 (baseline) -> bonus should be 0
+    // At level 1+, effect is 0.05 + 0.01*level -> we want this as the bonus
+    const prestigeBurstChance = burstChanceEffect === 1 ? 0 : burstChanceEffect;
+
+    // For burst_damage: getUpgradeEffect returns 1 at level 0, or (5.0 + 1.0*level) at level 1+
+    // This is used as a multiplier, so level 0 = 1x, level 1 = 6x, etc.
+    const prestigeBurstDamage = getBonusForType('burst_damage');
+
     return {
       prestigeAutoDamage: getBonusForType('auto_damage'),
       prestigeTapPower: getBonusForType('tap_power'),
-      prestigeBurstChance: getBonusForType('burst_chance') - 0.05,
-      prestigeBurstDamage: getBonusForType('burst_damage') / 5,
+      prestigeBurstChance,
+      prestigeBurstDamage,
       boostMultiplier: 1,
       tierMultiplier: 1,
     };
@@ -282,6 +299,7 @@ export class CombatSystem {
       autoDamagePerTick: 1,
       burstChance: 0.05,
       burstMultiplier: 5,
+      baseTapDamage: 10,
     };
   }
 }

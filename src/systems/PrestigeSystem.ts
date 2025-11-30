@@ -20,9 +20,9 @@ export interface PrestigeResetResult {
 
 export class PrestigeSystem {
   private readonly BASE_BLUEPRINT_WAVE = 100;
-  private readonly BASE_BLUEPRINTS = 50; // Base reward for reaching wave 100
-  private readonly BLUEPRINTS_PER_WAVE = 5; // Blueprints per wave above 100
-  private readonly WAVE_SCALING = 1.08; // Moderate scaling to prevent extreme late-game rewards
+  private readonly BASE_BLUEPRINTS = 100; // Base reward for reaching wave 100
+  private readonly BLUEPRINTS_PER_WAVE = 10; // Blueprints per wave above 100
+  private readonly WAVE_SCALING = 1.10; // Moderate scaling to prevent extreme late-game rewards
 
   /**
    * Calculate blueprints earned based on wave reached
@@ -185,11 +185,17 @@ export class PrestigeSystem {
   }
 
   /**
-   * Get starting scrap bonus from prestige upgrades
+   * Get starting scrap bonus from prestige upgrades.
+   * Uses wave-based scaling: highestWave * 50 * upgradeLevel
+   * This ensures the bonus scales meaningfully with progression.
    */
-  getStartingScrap(ownedUpgrades: Record<string, number>): number {
-    const bonuses = this.calculateBonuses(ownedUpgrades);
-    return bonuses.startingScrapBonus;
+  getStartingScrap(ownedUpgrades: Record<string, number>, highestWave: number = 0): number {
+    const upgradeLevel = ownedUpgrades['starting_scrap'] ?? 0;
+    if (upgradeLevel === 0) return 0;
+
+    // Wave-based scaling: highestWave * 50 * upgradeLevel
+    // At max level (10) after reaching wave 100: 100 * 50 * 10 = 50,000 scrap
+    return Math.floor(highestWave * 50 * upgradeLevel);
   }
 
   /**
@@ -270,6 +276,38 @@ export class PrestigeSystem {
   }
 
   /**
+   * Calculate the cost to purchase a builder with blueprints.
+   * Uses escalating pricing based on how many builders have been purchased.
+   */
+  getBuilderPurchaseCost(buildersPurchased: number): number {
+    if (buildersPurchased < 5) return 30;
+    if (buildersPurchased < 10) return 50;
+    if (buildersPurchased < 20) return 75;
+    return 100;
+  }
+
+  /**
+   * Check if player can afford to purchase a builder with blueprints.
+   */
+  canAffordBuilder(blueprints: number, buildersPurchased: number): boolean {
+    return blueprints >= this.getBuilderPurchaseCost(buildersPurchased);
+  }
+
+  /**
+   * Purchase a builder with blueprints.
+   */
+  purchaseBuilder(
+    blueprints: number,
+    buildersPurchased: number,
+  ): {success: boolean; cost: number; remainingBlueprints: number} {
+    const cost = this.getBuilderPurchaseCost(buildersPurchased);
+    if (blueprints < cost) {
+      return {success: false, cost, remainingBlueprints: blueprints};
+    }
+    return {success: true, cost, remainingBlueprints: blueprints - cost};
+  }
+
+  /**
    * Create initial player state with prestige bonuses applied
    */
   createPostPrestigeState(
@@ -278,7 +316,7 @@ export class PrestigeSystem {
     baseBuilders: number,
   ): PlayerState {
     const newTotalBlueprints = previousPlayer.blueprints + blueprintsEarned;
-    const startingScrap = this.getStartingScrap(previousPlayer.prestigeUpgrades);
+    const startingScrap = this.getStartingScrap(previousPlayer.prestigeUpgrades, previousPlayer.highestWave);
 
     return {
       scrap: startingScrap,
@@ -297,6 +335,7 @@ export class PrestigeSystem {
       },
       prestigeUpgrades: {...previousPlayer.prestigeUpgrades},
       activeBoosts: [],
+      buildersPurchased: previousPlayer.buildersPurchased,
     };
   }
 }

@@ -29,6 +29,11 @@ export interface CombatState {
   autoDamagePerTick: number;
   burstChance: number;
   burstMultiplier: number;
+  /**
+   * Base tap damage before wave scaling and training facility bonus.
+   * Effective tap damage = baseTapDamage + (highestWave * 2) + trainingFacilityBonus
+   */
+  baseTapDamage: number;
 }
 
 export interface BuilderState {
@@ -50,6 +55,8 @@ export interface PlayerState {
   builders: BuilderState;
   prestigeUpgrades: Record<string, number>;
   activeBoosts: BoostState[];
+  /** Number of builders purchased with blueprints (for escalating cost tiers) */
+  buildersPurchased: number;
 }
 
 export interface BoostState {
@@ -87,10 +94,11 @@ export const createInitialGameState = (): GameState => ({
     builders: {
       total: 10,
       available: 10,
-      maxBuilders: 100,
+      maxBuilders: 150,
     },
     prestigeUpgrades: {},
     activeBoosts: [],
+    buildersPurchased: 0,
   },
   buildings: [
     {
@@ -152,6 +160,7 @@ export const createInitialGameState = (): GameState => ({
     autoDamagePerTick: 1,
     burstChance: 0.05,
     burstMultiplier: 5,
+    baseTapDamage: 5,
   },
   currentWave: 1,
   dailyRewards: {

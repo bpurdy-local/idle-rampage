@@ -45,6 +45,7 @@ import {
   toBuildingType,
   getNextEvolutionTier,
   calculateEngineeringDiscount,
+  getMaxTotalBuilders,
 } from '../data/buildings';
 import {BuildingEvolutionTier} from '../models/Building';
 import {PRESTIGE_TIERS, PrestigeTier} from '../data/prestigeMilestones';
@@ -124,7 +125,6 @@ export const GameScreen: React.FC = () => {
     assignBuilder,
     unassignBuilder,
     upgradeBuilding,
-    damageEnemy,
     resetForPrestige,
     setBlueprints,
     setPrestigeUpgrade,
@@ -134,6 +134,7 @@ export const GameScreen: React.FC = () => {
     addBlueprints,
     addBuilders,
     addBoost,
+    purchaseBuilderWithBlueprints,
   } = useGameStore();
 
   // Calculate prestige bonuses
@@ -322,7 +323,13 @@ export const GameScreen: React.FC = () => {
   // Handle tap attack
   const handleTap = useCallback(
     (tapX?: number, tapY?: number) => {
-      if (!combat.currentEnemy || !combat.isActive) return;
+      // Get fresh state to avoid stale closure issues
+      const state = useGameStore.getState();
+      const currentCombat = state.combat;
+      const currentBuildings = state.buildings;
+      const currentPlayer = state.player;
+
+      if (!currentCombat.currentEnemy || !currentCombat.isActive) return;
 
       // Check tap cooldown to prevent auto-clicker abuse
       const now = Date.now();
@@ -331,46 +338,49 @@ export const GameScreen: React.FC = () => {
       }
       lastTapTimeRef.current = now;
 
+      // Calculate prestige bonuses with fresh state
+      const currentPrestigeBonuses = prestigeSystem.calculateBonuses(currentPlayer.prestigeUpgrades);
+
       // Calculate base tap damage with Training Ground bonus
-      const trainingBonus = combatSystem.calculateTapDamageBonus(buildings);
+      const trainingBonus = combatSystem.calculateTapDamageBonus(currentBuildings);
       const baseTapDamage = 10 + trainingBonus;
-      const tapTierMultiplier = PRESTIGE_TIERS[player.buildingTier]?.multiplier ?? 1;
+      const tapTierMultiplier = PRESTIGE_TIERS[currentPlayer.buildingTier]?.multiplier ?? 1;
 
       const debugTapDamageMultiplier = DEBUG_CONFIG.ENABLED ? DEBUG_CONFIG.DAMAGE_MULTIPLIER : 1;
       const tapDamage = combatSystem.calculateTapDamage(baseTapDamage, {
-        prestigeAutoDamage: prestigeBonuses.autoDamageMultiplier,
-        prestigeTapPower: prestigeBonuses.tapPowerMultiplier * debugTapDamageMultiplier,
-        prestigeBurstChance: prestigeBonuses.burstChanceBonus,
-        prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
+        prestigeAutoDamage: currentPrestigeBonuses.autoDamageMultiplier,
+        prestigeTapPower: currentPrestigeBonuses.tapPowerMultiplier * debugTapDamageMultiplier,
+        prestigeBurstChance: currentPrestigeBonuses.burstChanceBonus,
+        prestigeBurstDamage: currentPrestigeBonuses.burstDamageMultiplier,
         boostMultiplier: 1,
         tierMultiplier: tapTierMultiplier,
       });
 
       const burst = combatSystem.checkBurstAttack(
-        combat.burstChance + prestigeBonuses.burstChanceBonus,
-        combat.burstMultiplier * prestigeBonuses.burstDamageMultiplier,
+        currentCombat.burstChance + currentPrestigeBonuses.burstChanceBonus,
+        currentCombat.burstMultiplier * currentPrestigeBonuses.burstDamageMultiplier,
         {
           prestigeAutoDamage: 1,
           prestigeTapPower: 1,
-          prestigeBurstChance: prestigeBonuses.burstChanceBonus,
-          prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
+          prestigeBurstChance: currentPrestigeBonuses.burstChanceBonus,
+          prestigeBurstDamage: currentPrestigeBonuses.burstDamageMultiplier,
           boostMultiplier: 1,
           tierMultiplier: tapTierMultiplier,
         },
       );
 
       const finalDamage = tapDamage * burst.multiplier;
-      damageEnemy(finalDamage);
+      state.damageEnemy(finalDamage);
 
       // Calculate scrap from tap damage
       const debugScrapMultiplier = DEBUG_CONFIG.ENABLED ? DEBUG_CONFIG.SCRAP_MULTIPLIER : 1;
       const tapScrap = combatSystem.calculateScrapFromDamage(
         finalDamage,
-        combat.currentEnemy,
-        prestigeBonuses.waveRewardsMultiplier * debugScrapMultiplier,
+        currentCombat.currentEnemy,
+        currentPrestigeBonuses.waveRewardsMultiplier * debugScrapMultiplier,
       );
       if (tapScrap > 0) {
-        addScrap(tapScrap);
+        state.addScrap(tapScrap);
       }
 
       // Spawn damage popup at tap location or default enemy area
@@ -383,7 +393,7 @@ export const GameScreen: React.FC = () => {
         spawnTapRipple(tapX, tapY);
       }
     },
-    [combat, combatSystem, buildings, prestigeBonuses, damageEnemy, spawnPopup, spawnTapRipple, player.buildingTier, addScrap],
+    [combatSystem, prestigeSystem, spawnPopup, spawnTapRipple],
   );
 
   // Handle builder assignment (directly through store since it has validation)
@@ -458,6 +468,11 @@ export const GameScreen: React.FC = () => {
     [player.blueprints, player.prestigeUpgrades, prestigeSystem, setBlueprints, setPrestigeUpgrade],
   );
 
+  // Handle builder purchase with blueprints
+  const handlePurchaseBuilder = useCallback(() => {
+    purchaseBuilderWithBlueprints();
+  }, [purchaseBuilderWithBlueprints]);
+
   // Get prestige upgrade status for UI
   const upgradeStatus = prestigeSystem.getUpgradeStatus(player.blueprints, player.prestigeUpgrades);
   const prestigePreview = prestigeSystem.previewPrestige(currentWave);
@@ -530,12 +545,23 @@ export const GameScreen: React.FC = () => {
             const nextTier = getNextEvolutionTier(evolvableBuilding, currentWave);
 
             const waveBonus = productionSystem.calculateWaveBonus(currentWave);
+            // Use the appropriate prestige multiplier based on building role
+            const prestigeMultiplier = (() => {
+              switch (building.typeId) {
+                case 'turret_station':
+                  return prestigeBonuses.autoDamageMultiplier;
+                case 'training_facility':
+                  return prestigeBonuses.tapPowerMultiplier;
+                default:
+                  return prestigeBonuses.productionMultiplier;
+              }
+            })();
             const production = calculateProduction(
               buildingType,
               building.level,
               building.assignedBuilders,
               waveBonus,
-              prestigeBonuses.productionMultiplier,
+              prestigeMultiplier,
             );
 
             const upgradeCost = getDiscountedUpgradeCost(buildingType, building.level);
@@ -545,6 +571,7 @@ export const GameScreen: React.FC = () => {
                 key={building.id}
                 building={building}
                 buildingType={buildingType}
+                buildingTypeId={building.typeId}
                 production={production}
                 upgradeCost={upgradeCost}
                 canAffordUpgrade={player.scrap >= upgradeCost}
@@ -581,8 +608,13 @@ export const GameScreen: React.FC = () => {
             canAfford: s.canAfford,
             currentEffect: s.currentEffect,
           }))}
+          totalBuilders={player.builders.total}
+          maxBuilders={getMaxTotalBuilders()}
+          builderCost={prestigeSystem.getBuilderPurchaseCost(player.buildersPurchased)}
+          canAffordBuilder={prestigeSystem.canAffordBuilder(player.blueprints, player.buildersPurchased)}
           onPrestige={handlePrestige}
           onPurchaseUpgrade={handlePurchaseUpgrade}
+          onPurchaseBuilder={handlePurchaseBuilder}
           onClose={() => setShowPrestige(false)}
         />
       </Modal>

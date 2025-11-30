@@ -15,6 +15,7 @@ import {
   getBuildingsEvolvingAtWave,
 } from '../data/buildings';
 import {getTierForPrestigeCount, wouldUnlockMilestone} from '../data/prestigeMilestones';
+import {PrestigeSystem} from '../systems/PrestigeSystem';
 
 interface GameActions {
   setScrap: (amount: number) => void;
@@ -25,6 +26,7 @@ interface GameActions {
   assignBuilder: (buildingId: string) => boolean;
   unassignBuilder: (buildingId: string) => boolean;
   addBuilders: (count: number) => void;
+  purchaseBuilderWithBlueprints: () => {success: boolean; cost: number};
 
   setBuildings: (buildings: BuildingState[]) => void;
   updateBuilding: (buildingId: string, updates: Partial<BuildingState>) => void;
@@ -98,6 +100,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const building = state.buildings[buildingIndex];
     if (!building.isUnlocked) return false;
 
+    // Check if building accepts workers and has capacity
+    const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+    if (!evolvableBuilding) return false;
+
+    // Buildings with noWorkers property (like command_center) don't accept builders
+    if (evolvableBuilding.noWorkers) {
+      return false;
+    }
+
+    // Check if building has reached its max builder capacity
+    if (building.assignedBuilders >= evolvableBuilding.maxBuilders) {
+      return false;
+    }
+
     const updatedBuildings = [...state.buildings];
     updatedBuildings[buildingIndex] = {
       ...building,
@@ -169,6 +185,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
         },
       },
     });
+  },
+
+  purchaseBuilderWithBlueprints: () => {
+    const player = get().player;
+    const prestigeSystem = new PrestigeSystem();
+    const maxBuilders = getMaxTotalBuilders();
+
+    // Check if at max builders
+    if (player.builders.total >= maxBuilders) {
+      return {success: false, cost: 0};
+    }
+
+    const result = prestigeSystem.purchaseBuilder(
+      player.blueprints,
+      player.buildersPurchased,
+    );
+
+    if (result.success) {
+      set({
+        player: {
+          ...player,
+          blueprints: result.remainingBlueprints,
+          buildersPurchased: player.buildersPurchased + 1,
+          builders: {
+            ...player.builders,
+            total: player.builders.total + 1,
+            available: player.builders.available + 1,
+          },
+        },
+      });
+    }
+
+    return {success: result.success, cost: result.cost};
   },
 
   setBuildings: (buildings: BuildingState[]) => set({buildings}),
@@ -307,6 +356,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Add a boost to the player's active boosts.
+   *
+   * BOOST STACKING RULES:
+   * 1. Same-type boosts: Multipliers multiply together (2x + 2x = 4x)
+   * 2. Different-type boosts: Each applies independently
+   * 3. Maximum effective multiplier: 10x cap (enforced at consumption)
+   * 4. Duration: Each boost tracks its own remaining duration independently
+   *
+   * Example: 2x production boost + 2x all boost = 4x production, 2x combat
+   */
   addBoost: (boost: BoostState) => {
     const player = get().player;
     set({
@@ -354,9 +414,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Get the new tier based on the new prestige count
     const newTier = getTierForPrestigeCount(newPrestigeCount);
 
+    // Calculate starting scrap bonus from prestige upgrades
+    const prestigeSystem = new PrestigeSystem();
+    const startingScrap = prestigeSystem.getStartingScrap(
+      state.player.prestigeUpgrades,
+      state.player.highestWave,
+    );
+
     set({
       player: {
         ...initialState.player,
+        scrap: startingScrap,
         blueprints: state.player.blueprints,
         totalBlueprintsEarned: state.player.totalBlueprintsEarned,
         prestigeCount: newPrestigeCount,
@@ -369,6 +437,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         },
         prestigeUpgrades: state.player.prestigeUpgrades,
         activeBoosts: [],
+        buildersPurchased: state.player.buildersPurchased,
       },
       // Reset buildings to initial state (wave 1, tier 1)
       buildings: initialState.buildings.map(b => ({

@@ -339,8 +339,8 @@ export const EnemyDisplay: React.FC<EnemyDisplayProps> = ({
     );
   }
 
-  const healthPercent = enemy.currentHealth / enemy.maxHealth;
-  const timerPercent = waveTimer / waveTimerMax;
+  const healthPercent = enemy.maxHealth > 0 ? enemy.currentHealth / enemy.maxHealth : 0;
+  const timerPercent = waveTimerMax > 0 ? waveTimer / waveTimerMax : 0;
   const isBoss = enemy.isBoss === true;
   const threat = getThreatClass(enemy.name);
   const isTimerCritical = timerPercent < 0.25;

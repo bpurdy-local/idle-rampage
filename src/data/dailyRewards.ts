@@ -54,10 +54,13 @@ export const DAILY_REWARDS: DailyRewardDefinition[] = [
 
 // Calculate wave scaling multiplier for scrap rewards
 // Scales exponentially with wave progression to stay relevant
+// Capped at wave 50 to prevent excessive late-game scaling (~1M scrap max)
 export const calculateWaveScaling = (currentWave: number): number => {
   if (currentWave <= 1) return 1;
+  // Cap wave at 50 for scaling calculation to prevent excessive rewards
+  const cappedWave = Math.min(currentWave, 50);
   // Every 10 waves doubles the reward, with some base scaling
-  return Math.pow(1.15, currentWave - 1);
+  return Math.pow(1.15, cappedWave - 1);
 };
 
 export const getRewardForDay = (streak: number): DailyRewardDefinition => {

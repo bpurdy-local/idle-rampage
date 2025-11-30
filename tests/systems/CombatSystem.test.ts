@@ -40,6 +40,7 @@ const createMockCombatState = (): CombatState => ({
   autoDamagePerTick: 1,
   burstChance: 0.05,
   burstMultiplier: 5,
+  baseTapDamage: 10,
 });
 
 const defaultBonuses: CombatBonuses = {
