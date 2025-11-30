@@ -27,6 +27,10 @@ interface GameActions {
 
   assignBuilder: (buildingId: string) => boolean;
   unassignBuilder: (buildingId: string) => boolean;
+  assignBuildersToBuilding: (buildingId: string, count: number) => number;
+  unassignBuildersFromBuilding: (buildingId: string, count: number) => number;
+  recallAllBuilders: () => number;
+  focusBuilding: (buildingId: string) => number;
   addBuilders: (count: number) => void;
   purchaseBuilderWithBlueprints: () => {success: boolean; cost: number};
 
@@ -176,6 +180,151 @@ export const useGameStore = create<GameStore>((set, get) => ({
       assigned: building.assignedBuilders - 1,
     });
     return true;
+  },
+
+  assignBuildersToBuilding: (buildingId: string, count: number) => {
+    const state = get();
+    if (count <= 0 || state.player.builders.available <= 0) return 0;
+
+    const buildingIndex = state.buildings.findIndex(b => b.id === buildingId);
+    if (buildingIndex === -1) return 0;
+
+    const building = state.buildings[buildingIndex];
+    if (!building.isUnlocked) return 0;
+
+    const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+    if (!evolvableBuilding || evolvableBuilding.noWorkers) return 0;
+
+    const availableCapacity = evolvableBuilding.maxBuilders - building.assignedBuilders;
+    const actualCount = Math.min(count, state.player.builders.available, availableCapacity);
+    if (actualCount <= 0) return 0;
+
+    const updatedBuildings = [...state.buildings];
+    updatedBuildings[buildingIndex] = {
+      ...building,
+      assignedBuilders: building.assignedBuilders + actualCount,
+    };
+
+    set({
+      buildings: updatedBuildings,
+      player: {
+        ...state.player,
+        builders: {
+          ...state.player.builders,
+          available: state.player.builders.available - actualCount,
+        },
+      },
+    });
+
+    eventBus.emit(GameEvents.BUILDER_ASSIGNED, {
+      buildingId,
+      assigned: building.assignedBuilders + actualCount,
+    });
+    return actualCount;
+  },
+
+  unassignBuildersFromBuilding: (buildingId: string, count: number) => {
+    const state = get();
+    if (count <= 0) return 0;
+
+    const buildingIndex = state.buildings.findIndex(b => b.id === buildingId);
+    if (buildingIndex === -1) return 0;
+
+    const building = state.buildings[buildingIndex];
+    const actualCount = Math.min(count, building.assignedBuilders);
+    if (actualCount <= 0) return 0;
+
+    const updatedBuildings = [...state.buildings];
+    updatedBuildings[buildingIndex] = {
+      ...building,
+      assignedBuilders: building.assignedBuilders - actualCount,
+    };
+
+    set({
+      buildings: updatedBuildings,
+      player: {
+        ...state.player,
+        builders: {
+          ...state.player.builders,
+          available: state.player.builders.available + actualCount,
+        },
+      },
+    });
+
+    eventBus.emit(GameEvents.BUILDER_ASSIGNED, {
+      buildingId,
+      assigned: building.assignedBuilders - actualCount,
+    });
+    return actualCount;
+  },
+
+  recallAllBuilders: () => {
+    const state = get();
+    let totalRecalled = 0;
+
+    const updatedBuildings = state.buildings.map(building => {
+      if (building.assignedBuilders > 0) {
+        totalRecalled += building.assignedBuilders;
+        return {...building, assignedBuilders: 0};
+      }
+      return building;
+    });
+
+    if (totalRecalled > 0) {
+      set({
+        buildings: updatedBuildings,
+        player: {
+          ...state.player,
+          builders: {
+            ...state.player.builders,
+            available: state.player.builders.available + totalRecalled,
+          },
+        },
+      });
+    }
+
+    return totalRecalled;
+  },
+
+  focusBuilding: (buildingId: string) => {
+    const state = get();
+    if (state.player.builders.available <= 0) return 0;
+
+    const buildingIndex = state.buildings.findIndex(b => b.id === buildingId);
+    if (buildingIndex === -1) return 0;
+
+    const building = state.buildings[buildingIndex];
+    if (!building.isUnlocked) return 0;
+
+    const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+    if (!evolvableBuilding || evolvableBuilding.noWorkers) return 0;
+
+    const availableCapacity = evolvableBuilding.maxBuilders - building.assignedBuilders;
+    const actualCount = Math.min(state.player.builders.available, availableCapacity);
+    if (actualCount <= 0) return 0;
+
+    const updatedBuildings = [...state.buildings];
+    updatedBuildings[buildingIndex] = {
+      ...building,
+      assignedBuilders: building.assignedBuilders + actualCount,
+    };
+
+    set({
+      buildings: updatedBuildings,
+      player: {
+        ...state.player,
+        builders: {
+          ...state.player.builders,
+          available: state.player.builders.available - actualCount,
+        },
+      },
+    });
+
+    eventBus.emit(GameEvents.BUILDER_ASSIGNED, {
+      buildingId,
+      assigned: building.assignedBuilders + actualCount,
+    });
+    return actualCount;
   },
 
   addBuilders: (count: number) => {

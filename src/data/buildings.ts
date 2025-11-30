@@ -312,8 +312,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
     id: 'shield_generator',
     role: 'utility',
     costMultiplier: 1.25,
-    maxBuilders: 0,
-    noWorkers: true,
+    maxBuilders: 50,
     tiers: [
       {
         tier: 1,

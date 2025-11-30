@@ -31,6 +31,9 @@ interface BuildingCardProps {
   canAffordUpgrade: boolean;
   onAssignBuilder: () => void;
   onUnassignBuilder: () => void;
+  onAssignMultiple: (count: number) => void;
+  onUnassignMultiple: (count: number) => void;
+  onFocus: () => void;
   onUpgrade: () => void;
   onShowInfo: () => void;
   availableBuilders: number;
@@ -56,6 +59,9 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   canAffordUpgrade,
   onAssignBuilder,
   onUnassignBuilder,
+  onAssignMultiple,
+  onUnassignMultiple,
+  onFocus,
   onUpgrade,
   onShowInfo,
   availableBuilders,
@@ -69,6 +75,9 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
 }) => {
   const canAssign = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   const canUnassign = !noWorkers && building.assignedBuilders > 0;
+  const canAssign5 = !noWorkers && availableBuilders >= 5 && building.assignedBuilders + 5 <= buildingType.maxBuilders;
+  const canUnassign5 = !noWorkers && building.assignedBuilders >= 5;
+  const canFocus = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
 
   // Get role-appropriate output label and formatted value
   const getOutputDisplay = (): {label: string; value: string} => {
@@ -152,12 +161,16 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   // Refs to track latest enabled states for hold-to-repeat
   const canAssignRef = useRef(canAssign);
   const canUnassignRef = useRef(canUnassign);
+  const canAssign5Ref = useRef(canAssign5);
+  const canUnassign5Ref = useRef(canUnassign5);
   const canAffordUpgradeRef = useRef(canAffordUpgrade);
 
   // Keep refs in sync with latest values
   useEffect(() => {
     canAssignRef.current = canAssign;
     canUnassignRef.current = canUnassign;
+    canAssign5Ref.current = canAssign5;
+    canUnassign5Ref.current = canUnassign5;
     canAffordUpgradeRef.current = canAffordUpgrade;
   });
 
@@ -167,6 +180,9 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
 
   const minusBtnScale = useSharedValue(1);
   const plusBtnScale = useSharedValue(1);
+  const minus5BtnScale = useSharedValue(1);
+  const plus5BtnScale = useSharedValue(1);
+  const focusBtnScale = useSharedValue(1);
   const upgradeBtnScale = useSharedValue(1);
 
   // Hold-to-repeat state
@@ -261,6 +277,18 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
     transform: [{scale: plusBtnScale.value}],
   }));
 
+  const minus5BtnStyle = useAnimatedStyle(() => ({
+    transform: [{scale: minus5BtnScale.value}],
+  }));
+
+  const plus5BtnStyle = useAnimatedStyle(() => ({
+    transform: [{scale: plus5BtnScale.value}],
+  }));
+
+  const focusBtnStyle = useAnimatedStyle(() => ({
+    transform: [{scale: focusBtnScale.value}],
+  }));
+
   const upgradeBtnStyle = useAnimatedStyle(() => ({
     transform: [{scale: upgradeBtnScale.value}],
   }));
@@ -331,6 +359,11 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
         {!noWorkers && (
           <View style={styles.builderActions}>
             <AnimatedPressable
+              style={[styles.builderBtnSmall, !canUnassign5 && styles.btnDisabled, minus5BtnStyle]}
+              {...createHoldablePressHandler(minus5BtnScale, () => onUnassignMultiple(5), () => canUnassign5Ref.current)}>
+              <Text style={styles.builderBtnTextSmall}>-5</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
               style={[styles.builderBtn, !canUnassign && styles.btnDisabled, minusBtnStyle]}
               {...createHoldablePressHandler(minusBtnScale, onUnassignBuilder, () => canUnassignRef.current)}>
               <Text style={styles.builderBtnText}>-</Text>
@@ -340,6 +373,16 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
               style={[styles.builderBtn, !canAssign && styles.btnDisabled, plusBtnStyle]}
               {...createHoldablePressHandler(plusBtnScale, onAssignBuilder, () => canAssignRef.current)}>
               <Text style={styles.builderBtnText}>+</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={[styles.builderBtnSmall, !canAssign5 && styles.btnDisabled, plus5BtnStyle]}
+              {...createHoldablePressHandler(plus5BtnScale, () => onAssignMultiple(5), () => canAssign5Ref.current)}>
+              <Text style={styles.builderBtnTextSmall}>+5</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={[styles.focusBtn, !canFocus && styles.btnDisabled, focusBtnStyle]}
+              onPress={canFocus ? onFocus : undefined}>
+              <Text style={styles.focusBtnText}>ALL</Text>
             </AnimatedPressable>
           </View>
         )}
@@ -470,25 +513,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   builderBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#2196F3',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  builderBtnSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#1976D2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 2,
+  },
+  focusBtn: {
+    paddingHorizontal: 8,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FF9800',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
   },
   btnDisabled: {
     backgroundColor: '#333',
   },
   builderBtnText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  builderBtnTextSmall: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  focusBtnText: {
+    color: '#fff',
+    fontSize: 10,
     fontWeight: '700',
   },
   builderCount: {
     color: '#fff',
     fontSize: 14,
-    marginHorizontal: 12,
+    marginHorizontal: 8,
   },
   upgradeBtn: {
     backgroundColor: '#4CAF50',

@@ -148,6 +148,10 @@ export const GameScreen: React.FC = () => {
     setScrap,
     assignBuilder,
     unassignBuilder,
+    assignBuildersToBuilding,
+    unassignBuildersFromBuilding,
+    recallAllBuilders,
+    focusBuilding,
     upgradeBuilding,
     resetForPrestige,
     setBlueprints,
@@ -257,14 +261,16 @@ export const GameScreen: React.FC = () => {
     return () => saveService.stopAutoSave();
   }, []);
 
-  // Check for daily reward on mount
+  // Check for daily reward on mount (skip on first run before onboarding)
   useEffect(() => {
+    if (!hasCompletedOnboarding) return;
+
     const result = dailyRewardSystem.checkForReward(dailyRewards);
     if (result.hasReward && result.reward) {
       setPendingReward(result);
       setShowDailyReward(true);
     }
-  }, []);
+  }, [hasCompletedOnboarding]);
 
   // Check for offline earnings on mount
   useEffect(() => {
@@ -500,6 +506,31 @@ export const GameScreen: React.FC = () => {
     [unassignBuilder],
   );
 
+  const handleAssignMultiple = useCallback(
+    (buildingId: string, count: number) => {
+      assignBuildersToBuilding(buildingId, count);
+    },
+    [assignBuildersToBuilding],
+  );
+
+  const handleUnassignMultiple = useCallback(
+    (buildingId: string, count: number) => {
+      unassignBuildersFromBuilding(buildingId, count);
+    },
+    [unassignBuildersFromBuilding],
+  );
+
+  const handleFocusBuilding = useCallback(
+    (buildingId: string) => {
+      focusBuilding(buildingId);
+    },
+    [focusBuilding],
+  );
+
+  const handleRecallAllBuilders = useCallback(() => {
+    recallAllBuilders();
+  }, [recallAllBuilders]);
+
   // Calculate discounted upgrade cost (with Engineering Bay bonus)
   const getDiscountedUpgradeCost = useCallback(
     (buildingType: BuildingType, level: number) => {
@@ -647,6 +678,14 @@ export const GameScreen: React.FC = () => {
         <TouchableOpacity style={styles.tab}>
           <Text style={styles.tabTextActive}>Buildings</Text>
         </TouchableOpacity>
+        <View style={styles.builderInfo}>
+          <Text style={styles.builderInfoText}>👷 {player.builders.available}/{player.builders.total}</Text>
+          {player.builders.available < player.builders.total && (
+            <TouchableOpacity style={styles.recallBtn} onPress={handleRecallAllBuilders}>
+              <Text style={styles.recallBtnText}>Recall</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <TouchableOpacity style={styles.tab} onPress={() => setShowShop(true)}>
           <Text style={styles.shopTabText}>Depot</Text>
         </TouchableOpacity>
@@ -703,6 +742,9 @@ export const GameScreen: React.FC = () => {
                 availableBuilders={player.builders.available}
                 onAssignBuilder={() => handleAssignBuilder(building.id)}
                 onUnassignBuilder={() => handleUnassignBuilder(building.id)}
+                onAssignMultiple={(count) => handleAssignMultiple(building.id, count)}
+                onUnassignMultiple={(count) => handleUnassignMultiple(building.id, count)}
+                onFocus={() => handleFocusBuilding(building.id)}
                 onUpgrade={() => handleUpgrade(building.id)}
                 onShowInfo={() => setSelectedBuildingInfo(buildingType)}
                 prestigeCount={player.prestigeCount}
@@ -843,6 +885,27 @@ const styles = StyleSheet.create({
   shopTabText: {
     color: '#FFD700',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  builderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    gap: 8,
+  },
+  builderInfoText: {
+    color: '#aaa',
+    fontSize: 12,
+  },
+  recallBtn: {
+    backgroundColor: '#FF5722',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  recallBtnText: {
+    color: '#fff',
+    fontSize: 11,
     fontWeight: '600',
   },
   buildingList: {

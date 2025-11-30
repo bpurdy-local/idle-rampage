@@ -1,4 +1,4 @@
-import React, {useEffect, useCallback} from 'react';
+import React, {useEffect, useCallback, useRef} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Dimensions} from 'react-native';
 import Animated, {
   useSharedValue,
@@ -10,6 +10,9 @@ import Animated, {
 import {BuildingEvolutionTier} from '../../models/Building';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
+
+/** Auto-dismiss delay in milliseconds */
+const AUTO_DISMISS_DELAY = 4000;
 
 // ============================================================================
 // Building Evolution Tooltip - Used for building unlock/evolution notifications
@@ -31,38 +34,58 @@ export const BuildingEvolutionTooltip: React.FC<BuildingEvolutionTooltipProps> =
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.8);
   const translateY = useSharedValue(-50);
+  const onDismissRef = useRef(onDismiss);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep ref in sync
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   useEffect(() => {
     if (visible && newTier) {
+      // Clear any existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
       // Animate in from top
       opacity.value = withTiming(1, {duration: 300});
       scale.value = withSpring(1, {damping: 15});
       translateY.value = withSpring(0, {damping: 15});
 
-      // Auto-dismiss after 4 seconds
-      const timeout = setTimeout(() => {
+      // Auto-dismiss after delay
+      timeoutRef.current = setTimeout(() => {
         opacity.value = withTiming(0, {duration: 300});
         scale.value = withTiming(0.8, {duration: 300});
         translateY.value = withTiming(-50, {duration: 300}, () => {
-          runOnJS(onDismiss)();
+          runOnJS(onDismissRef.current)();
         });
-      }, 4000);
+      }, AUTO_DISMISS_DELAY);
 
-      return () => clearTimeout(timeout);
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
     } else {
       // Reset
       opacity.value = 0;
       scale.value = 0.8;
       translateY.value = -50;
     }
-  }, [visible, newTier, opacity, scale, translateY, onDismiss]);
+  }, [visible, newTier, opacity, scale, translateY]);
 
   const handleDismiss = useCallback(() => {
+    // Clear auto-dismiss timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     opacity.value = withTiming(0, {duration: 200});
     scale.value = withTiming(0.8, {duration: 200});
     translateY.value = withTiming(-50, {duration: 200});
-    setTimeout(onDismiss, 200);
-  }, [opacity, scale, translateY, onDismiss]);
+    setTimeout(() => onDismissRef.current(), 200);
+  }, [opacity, scale, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
