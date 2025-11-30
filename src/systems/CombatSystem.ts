@@ -49,8 +49,12 @@ export class CombatSystem {
     for (const building of buildings) {
       const evolvableBuilding = getEvolvableBuildingById(building.typeId);
       if (!evolvableBuilding) continue;
-      // Only turret_station provides auto damage
-      if (building.typeId !== 'turret_station') continue;
+      // weak_point_scanner does NOT provide auto damage (it enables weak points for tap damage)
+      // training_facility does NOT provide auto damage (it boosts tap damage only)
+      // Currently no buildings provide auto-damage - all combat is tap-based
+      if (building.typeId === 'weak_point_scanner') continue;
+      if (building.typeId === 'training_facility') continue;
+      if (evolvableBuilding.role !== 'combat') continue;
       if (!building.isUnlocked) continue;
 
       // Get the tier based on the building's current evolution tier

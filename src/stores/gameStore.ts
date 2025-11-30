@@ -13,6 +13,7 @@ import {
   getEvolvableBuildingById,
   getCurrentEvolutionTier,
   getBuildingsEvolvingAtWave,
+  getBuildingsUnlockingAtWave,
 } from '../data/buildings';
 import {getTierForPrestigeCount, wouldUnlockMilestone} from '../data/prestigeMilestones';
 import {PrestigeSystem} from '../systems/PrestigeSystem';
@@ -333,12 +334,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Emit wave cleared event
     eventBus.emit(GameEvents.WAVE_CLEARED, {wave: state.currentWave});
 
-    // Check for and emit building evolution events
+    // Check for and emit building unlock events (tier 1)
+    const unlocks = getBuildingsUnlockingAtWave(newWave);
+    for (const {building, tier} of unlocks) {
+      eventBus.emit(GameEvents.BUILDING_EVOLVED, {
+        buildingId: building.id,
+        newTier: tier,
+        isNewUnlock: true,
+      });
+    }
+
+    // Check for and emit building evolution events (tier 2+)
     const evolutions = getBuildingsEvolvingAtWave(newWave);
     for (const {building, newTier} of evolutions) {
       eventBus.emit(GameEvents.BUILDING_EVOLVED, {
         buildingId: building.id,
         newTier: newTier,
+        isNewUnlock: false,
       });
     }
   },

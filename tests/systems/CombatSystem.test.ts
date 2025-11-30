@@ -10,9 +10,11 @@ const createMockEnemy = (health: number = 100): EnemyState => ({
   reward: 10,
 });
 
-const createMockTurretBuilding = (assignedBuilders: number = 5): BuildingState => ({
-  id: 'turret_station_1',
-  typeId: 'turret_station',
+// Note: weak_point_scanner does NOT provide auto-damage (it enables weak points for tap damage)
+// For auto-damage tests, we use training_facility as it's the remaining combat building
+const createMockWeakPointScanner = (assignedBuilders: number = 5): BuildingState => ({
+  id: 'weak_point_scanner_1',
+  typeId: 'weak_point_scanner',
   level: 1,
   assignedBuilders,
   productionProgress: 0,
@@ -65,33 +67,23 @@ describe('CombatSystem', () => {
       expect(damage).toBe(0);
     });
 
-    it('returns passive baseline damage with no assigned builders', () => {
-      // With passive baseline, unlocked buildings provide damage even without workers
-      const building = createMockTurretBuilding(0);
+    it('returns 0 for weak_point_scanner (it enables weak points, not auto-damage)', () => {
+      const building = createMockWeakPointScanner(5);
       const damage = system.calculateAutoDamage([building], defaultBonuses);
-      expect(damage).toBeGreaterThan(0);
+      expect(damage).toBe(0);
     });
 
-    it('returns positive damage with turret buildings', () => {
-      const building = createMockTurretBuilding(5);
-      const damage = system.calculateAutoDamage([building], defaultBonuses);
-      expect(damage).toBeGreaterThan(0);
-    });
-
-    it('returns 0 for training facility (only turret provides auto damage)', () => {
+    it('returns 0 for training facility (it boosts tap damage, not auto-damage)', () => {
       const building = createMockTrainingBuilding(5);
       const damage = system.calculateAutoDamage([building], defaultBonuses);
       expect(damage).toBe(0);
     });
 
-    it('scales with prestige bonus', () => {
-      const building = createMockTurretBuilding(5);
-      const bonusWithPrestige = {...defaultBonuses, prestigeAutoDamage: 2};
-
-      const damageBase = system.calculateAutoDamage([building], defaultBonuses);
-      const damageWithBonus = system.calculateAutoDamage([building], bonusWithPrestige);
-
-      expect(damageWithBonus).toBe(damageBase * 2);
+    it('returns 0 when no auto-damage buildings exist', () => {
+      // With current design, neither weak_point_scanner nor training_facility provide auto-damage
+      const buildings = [createMockWeakPointScanner(5), createMockTrainingBuilding(5)];
+      const damage = system.calculateAutoDamage(buildings, defaultBonuses);
+      expect(damage).toBe(0);
     });
   });
 
@@ -219,22 +211,24 @@ describe('CombatSystem', () => {
       expect(result.timerExpired).toBe(true);
     });
 
-    it('deals damage with turret buildings', () => {
+    it('deals no auto-damage with current combat buildings (tap-only combat)', () => {
       const enemy = createMockEnemy(1000);
       const combat = createMockCombatState();
-      const buildings = [createMockTurretBuilding(10)];
+      // Current combat buildings (weak_point_scanner, training_facility) don't provide auto-damage
+      const buildings = [createMockWeakPointScanner(10), createMockTrainingBuilding(10)];
 
       const result = system.tick(enemy, buildings, combat, defaultBonuses, 1000);
-      expect(result.autoDamage).toBeGreaterThan(0);
+      expect(result.autoDamage).toBe(0);
     });
 
-    it('defeats enemy when health depleted', () => {
+    it('enemy not defeated without player input (no auto-damage)', () => {
       const enemy = createMockEnemy(1);
       const combat = createMockCombatState();
-      const buildings = [createMockTurretBuilding(10)];
+      const buildings = [createMockWeakPointScanner(10), createMockTrainingBuilding(10)];
 
       const result = system.tick(enemy, buildings, combat, defaultBonuses, 10000);
-      expect(result.enemyDefeated).toBe(true);
+      // Without auto-damage buildings, enemy won't be defeated by tick alone
+      expect(result.autoDamage).toBe(0);
     });
   });
 
@@ -294,35 +288,31 @@ describe('CombatSystem', () => {
   });
 
   describe('tick with scrapFromDamage', () => {
-    it('returns scrapFromDamage when dealing auto damage', () => {
+    it('returns 0 scrapFromDamage when no auto-damage buildings exist', () => {
       const enemy = createMockEnemy(100);
-      enemy.reward = 1000; // Large reward so even small damage yields scrap
+      enemy.reward = 1000;
       const combat = createMockCombatState();
-      const buildings = [createMockTurretBuilding(10)];
+      // Current combat buildings don't provide auto-damage
+      const buildings = [createMockWeakPointScanner(10), createMockTrainingBuilding(10)];
 
-      // Use a longer deltaTime to ensure we deal enough damage
       const result = system.tick(enemy, buildings, combat, defaultBonuses, 5000, 1);
 
-      // Should have some scrap from the damage dealt
-      expect(result.totalDamage).toBeGreaterThan(0);
-      expect(result.scrapFromDamage).toBeGreaterThan(0);
+      // No auto-damage means no scrap from tick
+      expect(result.totalDamage).toBe(0);
+      expect(result.scrapFromDamage).toBe(0);
     });
 
-    it('scrapFromDamage scales with reward multiplier', () => {
+    it('scrapFromDamage is 0 without auto-damage buildings', () => {
       const enemy1 = createMockEnemy(1000);
       enemy1.reward = 100;
-      const enemy2 = createMockEnemy(1000);
-      enemy2.reward = 100;
       const combat = createMockCombatState();
-      const buildings = [createMockTurretBuilding(10)];
+      const buildings = [createMockWeakPointScanner(10)];
 
       const result1 = system.tick(enemy1, buildings, combat, defaultBonuses, 1000, 1);
-      const result2 = system.tick(enemy2, buildings, combat, defaultBonuses, 1000, 2);
 
-      // With 2x multiplier, should get roughly 2x scrap (may not be exact due to damage variance)
-      if (result1.scrapFromDamage > 0 && result2.scrapFromDamage > 0) {
-        expect(result2.scrapFromDamage).toBeGreaterThan(result1.scrapFromDamage);
-      }
+      // No auto-damage means no scrap
+      expect(result1.totalDamage).toBe(0);
+      expect(result1.scrapFromDamage).toBe(0);
     });
 
     it('returns 0 scrapFromDamage when no damage dealt', () => {

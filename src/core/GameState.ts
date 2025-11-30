@@ -112,8 +112,8 @@ export const createInitialGameState = (): GameState => ({
       evolutionTier: 1,
     },
     {
-      id: 'turret_station_1',
-      typeId: 'turret_station',
+      id: 'training_facility_1',
+      typeId: 'training_facility',
       level: 1,
       assignedBuilders: 0,
       productionProgress: 0,
@@ -122,8 +122,8 @@ export const createInitialGameState = (): GameState => ({
       evolutionTier: 1,
     },
     {
-      id: 'training_facility_1',
-      typeId: 'training_facility',
+      id: 'weak_point_scanner_1',
+      typeId: 'weak_point_scanner',
       level: 1,
       assignedBuilders: 0,
       productionProgress: 0,
@@ -148,7 +148,17 @@ export const createInitialGameState = (): GameState => ({
       assignedBuilders: 0,
       productionProgress: 0,
       upgradeProgress: 0,
-      isUnlocked: false, // unlockWave: 12
+      isUnlocked: false, // unlockWave: 10
+      evolutionTier: 1,
+    },
+    {
+      id: 'shield_generator_1',
+      typeId: 'shield_generator',
+      level: 1,
+      assignedBuilders: 0,
+      productionProgress: 0,
+      upgradeProgress: 0,
+      isUnlocked: false, // unlockWave: 15
       evolutionTier: 1,
     },
   ],

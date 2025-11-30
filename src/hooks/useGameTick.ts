@@ -4,7 +4,7 @@
  */
 import {useCallback} from 'react';
 import {useGameStore} from '../stores/gameStore';
-import {EVOLVABLE_BUILDINGS} from '../data/buildings';
+import {EVOLVABLE_BUILDINGS, calculateShieldGeneratorBonus} from '../data/buildings';
 import {PRESTIGE_TIERS} from '../data/prestigeMilestones';
 import {ProductionSystem} from '../systems/ProductionSystem';
 import {CombatSystem, DAMAGE_SCRAP_PERCENT} from '../systems/CombatSystem';
@@ -94,7 +94,9 @@ export function useGameTick({
       } else if (!combat.isActive) {
         // Start first wave (only runs once at game start)
         const enemy = waveManager.spawnEnemyForWave(currentWave);
-        const timer = waveManager.calculateWaveTimer(currentWave);
+        const baseTimer = waveManager.calculateWaveTimer(currentWave);
+        const shieldBonus = calculateShieldGeneratorBonus(buildings);
+        const timer = baseTimer + shieldBonus;
         state.setCurrentEnemy(enemy);
         state.updateCombatStats({waveTimer: timer, waveTimerMax: timer});
         state.setCombatActive(true);
@@ -176,6 +178,7 @@ function handleCombatTick(
     handleWaveComplete(
       state,
       combat,
+      buildings,
       currentWave,
       prestigeBonuses,
       waveManager,
@@ -183,7 +186,7 @@ function handleCombatTick(
       onLuckyDrop,
     );
   } else if (combatResult.timerExpired) {
-    handleWaveFailed(state, currentWave, waveManager, onWaveFailed);
+    handleWaveFailed(state, buildings, currentWave, waveManager, onWaveFailed);
   }
 }
 
@@ -193,6 +196,7 @@ function handleCombatTick(
 function handleWaveComplete(
   state: ReturnType<typeof useGameStore.getState>,
   combat: ReturnType<typeof useGameStore.getState>['combat'],
+  buildings: ReturnType<typeof useGameStore.getState>['buildings'],
   currentWave: number,
   prestigeBonuses: ReturnType<PrestigeSystem['calculateBonuses']>,
   waveManager: WaveManager,
@@ -225,7 +229,9 @@ function handleWaveComplete(
   state.advanceWave();
   const nextWave = currentWave + 1;
   const nextEnemy = waveManager.spawnEnemyForWave(nextWave);
-  const nextTimer = waveManager.calculateWaveTimer(nextWave);
+  const baseTimer = waveManager.calculateWaveTimer(nextWave);
+  const shieldBonus = calculateShieldGeneratorBonus(buildings);
+  const nextTimer = baseTimer + shieldBonus;
   state.setCurrentEnemy(nextEnemy);
   state.updateCombatStats({waveTimer: nextTimer, waveTimerMax: nextTimer});
 }
@@ -235,6 +241,7 @@ function handleWaveComplete(
  */
 function handleWaveFailed(
   state: ReturnType<typeof useGameStore.getState>,
+  buildings: ReturnType<typeof useGameStore.getState>['buildings'],
   currentWave: number,
   waveManager: WaveManager,
   onWaveFailed: () => void,
@@ -243,7 +250,9 @@ function handleWaveFailed(
 
   // Restart same wave
   const retryEnemy = waveManager.spawnEnemyForWave(currentWave);
-  const retryTimer = waveManager.calculateWaveTimer(currentWave);
+  const baseTimer = waveManager.calculateWaveTimer(currentWave);
+  const shieldBonus = calculateShieldGeneratorBonus(buildings);
+  const retryTimer = baseTimer + shieldBonus;
   state.setCurrentEnemy(retryEnemy);
   state.updateCombatStats({waveTimer: retryTimer, waveTimerMax: retryTimer});
 }

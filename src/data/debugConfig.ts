@@ -17,6 +17,7 @@ export const DEBUG_CONFIG = {
 
   // Skip features
   SKIP_DAILY_REWARD_COOLDOWN: false, // Can claim daily reward repeatedly
+  DISABLE_TUTORIAL: false, // Disable tutorial tooltips
 };
 
 // Helper to check if debug mode is active

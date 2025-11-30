@@ -70,60 +70,60 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
     ],
   },
   {
-    id: 'turret_station',
+    id: 'weak_point_scanner',
     role: 'combat',
     costMultiplier: 1.20,
     maxBuilders: 50,
     tiers: [
       {
         tier: 1,
-        name: 'Turret Bay',
-        description: 'Basic auto-damage against enemies',
-        unlockWave: 3,
-        baseProduction: 0.5,
-        baseCost: 200,
+        name: 'Weak Point Scanner',
+        description: 'Reveals weak points for bonus tap damage',
+        unlockWave: 5,
+        baseProduction: 0.1,
+        baseCost: 300,
         iconName: 'crosshairs',
-        color: '#DC143C',
+        color: '#00CED1',
       },
       {
         tier: 2,
-        name: 'Gun Emplacement',
-        description: 'Improved auto-damage output',
+        name: 'Vulnerability Detector',
+        description: 'More weak points, 2.5x tap damage',
         unlockWave: 12,
-        baseProduction: 2,
+        baseProduction: 0.15,
         baseCost: 3000,
         iconName: 'bullseye',
-        color: '#FF4500',
+        color: '#20B2AA',
       },
       {
         tier: 3,
-        name: 'Weapons Lab',
-        description: 'Advanced auto-damage systems',
+        name: 'Targeting Array',
+        description: 'Faster weak points, 3x tap damage',
         unlockWave: 32,
-        baseProduction: 8,
+        baseProduction: 0.2,
         baseCost: 50000,
-        iconName: 'flask',
-        color: '#9932CC',
+        iconName: 'satellite-dish',
+        color: '#4682B4',
       },
       {
         tier: 4,
-        name: 'War Factory',
-        description: 'High-powered auto-damage machinery',
+        name: 'Neural Analyzer',
+        description: 'Larger weak points, 4x tap damage',
         unlockWave: 56,
-        baseProduction: 30,
+        baseProduction: 0.25,
         baseCost: 1000000,
-        iconName: 'shield-alt',
-        color: '#4169E1',
+        iconName: 'brain',
+        color: '#9370DB',
       },
       {
         tier: 5,
-        name: 'Doom Fortress',
-        description: 'Ultimate auto-damage destruction',
+        name: 'Quantum Scanner',
+        description: 'Maximum weak points, 5x tap damage',
         unlockWave: 84,
-        baseProduction: 100,
+        baseProduction: 0.3,
         baseCost: 20000000,
-        iconName: 'skull',
-        color: '#8B0000',
+        iconName: 'atom',
+        color: '#FF1493',
       },
     ],
   },
@@ -137,9 +137,9 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         tier: 1,
         name: 'Training Ground',
         description: 'Boosts tap damage',
-        unlockWave: 5,
+        unlockWave: 3,
         baseProduction: 0.3,
-        baseCost: 300,
+        baseCost: 200,
         iconName: 'dumbbell',
         color: '#FF6B35',
       },
@@ -293,6 +293,55 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       },
     ],
   },
+  {
+    id: 'shield_generator',
+    role: 'utility',
+    costMultiplier: 1.25,
+    maxBuilders: 0,
+    noWorkers: true,
+    tiers: [
+      {
+        tier: 1,
+        name: 'Shield Generator',
+        description: 'Adds +5 seconds to wave timer',
+        unlockWave: 15,
+        baseProduction: 5,
+        baseCost: 8000,
+        iconName: 'shield-alt',
+        color: '#4169E1',
+      },
+      {
+        tier: 2,
+        name: 'Barrier Projector',
+        description: 'Adds +8 seconds to wave timer',
+        unlockWave: 40,
+        baseProduction: 8,
+        baseCost: 200000,
+        iconName: 'shield-virus',
+        color: '#6495ED',
+      },
+      {
+        tier: 3,
+        name: 'Force Field Array',
+        description: 'Adds +12 seconds to wave timer',
+        unlockWave: 64,
+        baseProduction: 12,
+        baseCost: 2500000,
+        iconName: 'circle-notch',
+        color: '#00BFFF',
+      },
+      {
+        tier: 4,
+        name: 'Quantum Barrier',
+        description: 'Adds +18 seconds to wave timer',
+        unlockWave: 90,
+        baseProduction: 18,
+        baseCost: 50000000,
+        iconName: 'atom',
+        color: '#7B68EE',
+      },
+    ],
+  },
 ];
 
 /**
@@ -347,22 +396,15 @@ export const checkEvolutionAtWave = (
 };
 
 /**
- * Check if a building is unlocked at a given wave
+ * Check if a building would unlock at a given wave (tier 1)
  */
-export const isBuildingUnlockedAtWave = (
+export const checkUnlockAtWave = (
   building: EvolvableBuilding,
   wave: number,
-): boolean => {
-  return building.tiers[0].unlockWave <= wave;
-};
-
-/**
- * Get all buildings that unlock at a specific wave
- */
-export const getBuildingsUnlockingAtWave = (
-  wave: number,
-): EvolvableBuilding[] => {
-  return EVOLVABLE_BUILDINGS.filter(b => b.tiers[0].unlockWave === wave);
+): BuildingEvolutionTier | null => {
+  const firstTier = building.tiers[0];
+  // Return tier 1 if it unlocks at this wave
+  return firstTier && firstTier.unlockWave === wave ? firstTier : null;
 };
 
 /**
@@ -381,6 +423,24 @@ export const getBuildingsEvolvingAtWave = (
   }
 
   return evolutions;
+};
+
+/**
+ * Get all buildings that unlock at a specific wave (tier 1)
+ */
+export const getBuildingsUnlockingAtWave = (
+  wave: number,
+): {building: EvolvableBuilding; tier: BuildingEvolutionTier}[] => {
+  const unlocks: {building: EvolvableBuilding; tier: BuildingEvolutionTier}[] = [];
+
+  for (const building of EVOLVABLE_BUILDINGS) {
+    const tier = checkUnlockAtWave(building, wave);
+    if (tier) {
+      unlocks.push({building, tier});
+    }
+  }
+
+  return unlocks;
 };
 
 /**
@@ -403,20 +463,6 @@ export const toBuildingType = (
     iconName: tier.iconName,
     color: tier.color,
   };
-};
-
-/**
- * Get the BuildingType for a building at a specific wave
- */
-export const getBuildingTypeAtWave = (
-  buildingId: string,
-  currentWave: number,
-): BuildingType | undefined => {
-  const building = getEvolvableBuildingById(buildingId);
-  if (!building) return undefined;
-
-  const tier = getCurrentEvolutionTier(building, currentWave);
-  return toBuildingType(building, tier);
 };
 
 // ============================================================================
@@ -485,4 +531,28 @@ export const calculateEngineeringDiscount = (buildings: BuildingState[]): number
 
   // Return as multiplier (e.g., 0.15 discount -> 0.85 multiplier)
   return 1 - cappedDiscount;
+};
+
+/**
+ * Calculate the Shield Generator wave timer bonus.
+ * This is a static effect that scales with building level (no workers needed).
+ * Returns bonus seconds to add to wave timer.
+ */
+export const calculateShieldGeneratorBonus = (buildings: BuildingState[]): number => {
+  const shieldGenerator = buildings.find(b => b.typeId === 'shield_generator');
+  if (!shieldGenerator || !shieldGenerator.isUnlocked) return 0;
+
+  const evolvable = getEvolvableBuildingById('shield_generator');
+  if (!evolvable) return 0;
+
+  const tier = evolvable.tiers[shieldGenerator.evolutionTier - 1];
+  if (!tier) return 0;
+
+  // Static effect: baseProduction (seconds) + 0.5s per level above 1
+  // e.g., Tier 1 at level 5: 5s + (4 * 0.5s) = 7s
+  const baseBonus = tier.baseProduction;
+  const levelBonus = (shieldGenerator.level - 1) * 0.5;
+
+  // Cap at 30 seconds max bonus
+  return Math.min(30, baseBonus + levelBonus);
 };

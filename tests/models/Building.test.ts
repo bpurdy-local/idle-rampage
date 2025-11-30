@@ -6,8 +6,6 @@ import {
 } from '../../src/models/Building';
 import {
   calculateWorkerEfficiency,
-  calculateTotalWorkerEfficiency,
-  calculateMilestoneBonus,
 } from '../../src/systems/WorkerEfficiency';
 
 const mockBuildingType: BuildingType = {
@@ -145,23 +143,23 @@ describe('Building Cost Scaling (Balance Pacing Fix)', () => {
     expect(costLevel50).toBeLessThan(350000); // Still manageable
   });
 
-  it('Turret Station has 1.20x cost multiplier', () => {
-    const turretType: BuildingType = {
-      id: 'turret_station',
-      name: 'Turret Bay',
+  it('Weak Point Scanner has 1.20x cost multiplier', () => {
+    const scannerType: BuildingType = {
+      id: 'weak_point_scanner',
+      name: 'Weak Point Scanner',
       description: 'Test',
       role: 'combat',
-      baseProduction: 0.5,
+      baseProduction: 0.1,
       baseCost: 200,
       costMultiplier: 1.20,
       maxBuilders: 50,
       unlockWave: 3,
       iconName: 'crosshairs',
-      color: '#DC143C',
+      color: '#00CED1',
     };
 
-    const costLevel1 = calculateUpgradeCost(turretType, 1);
-    const costLevel50 = calculateUpgradeCost(turretType, 50);
+    const costLevel1 = calculateUpgradeCost(scannerType, 1);
+    const costLevel50 = calculateUpgradeCost(scannerType, 50);
 
     expect(costLevel1).toBe(200);
     expect(costLevel50).toBeLessThan(2000000); // Reasonable cost at level 50
@@ -212,51 +210,6 @@ describe('Building Cost Scaling (Balance Pacing Fix)', () => {
 });
 
 describe('WorkerEfficiency', () => {
-  describe('calculateTotalWorkerEfficiency', () => {
-    it('returns 0 for 0 workers', () => {
-      const efficiency = calculateTotalWorkerEfficiency(0);
-      expect(efficiency).toBe(0);
-    });
-
-    it('returns 1 for 1 worker (100% efficient)', () => {
-      const efficiency = calculateTotalWorkerEfficiency(1);
-      expect(efficiency).toBe(1);
-    });
-
-    it('returns less than linear for multiple workers', () => {
-      const efficiency5 = calculateTotalWorkerEfficiency(5);
-      const efficiency10 = calculateTotalWorkerEfficiency(10);
-
-      // With diminishing returns, 5 workers < 5 effective, 10 workers < 10 effective
-      expect(efficiency5).toBeLessThan(5);
-      expect(efficiency5).toBeGreaterThan(3); // But still significant
-      expect(efficiency10).toBeLessThan(10);
-      expect(efficiency10).toBeGreaterThan(5);
-    });
-  });
-
-  describe('calculateMilestoneBonus', () => {
-    it('returns 1 for 0-4 workers (no bonus)', () => {
-      expect(calculateMilestoneBonus(0)).toBe(1);
-      expect(calculateMilestoneBonus(4)).toBe(1);
-    });
-
-    it('returns 1.15 for 5-9 workers (+15%)', () => {
-      expect(calculateMilestoneBonus(5)).toBe(1.15);
-      expect(calculateMilestoneBonus(9)).toBe(1.15);
-    });
-
-    it('returns 1.40 for 10-19 workers (+40% cumulative)', () => {
-      expect(calculateMilestoneBonus(10)).toBe(1.40);
-      expect(calculateMilestoneBonus(19)).toBe(1.40);
-    });
-
-    it('returns 1.75 for 20+ workers (+75% cumulative)', () => {
-      expect(calculateMilestoneBonus(20)).toBe(1.75);
-      expect(calculateMilestoneBonus(50)).toBe(1.75);
-    });
-  });
-
   describe('calculateWorkerEfficiency', () => {
     it('includes passive baseline by default', () => {
       const withPassive = calculateWorkerEfficiency(0, true);

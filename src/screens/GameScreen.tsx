@@ -30,9 +30,15 @@ import {
   ResourcePopupData,
   DamagePopupManager,
   MilestonePopup,
-  BuildingEvolutionPopup,
+  BuildingEvolutionTooltip,
   SettingsModal,
   ScavengersDepot,
+  WeakPointOverlay,
+  checkWeakPointHit,
+  getWeakPointDamageMultiplier,
+  WeakPoint,
+  TutorialManager,
+  TutorialState,
 } from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
 import {getScaledRewardAmount} from '../data/dailyRewards';
@@ -80,9 +86,21 @@ export const GameScreen: React.FC = () => {
   const [buildingEvolution, setBuildingEvolution] = useState<{
     buildingId: string;
     newTier: BuildingEvolutionTier;
+    isNewUnlock: boolean;
   } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [weakPoints, setWeakPoints] = useState<WeakPoint[]>([]);
+  const [dismissedTips, setDismissedTips] = useState<Set<string>>(new Set());
+  const [totalTaps, setTotalTaps] = useState(0);
+  const [hasAssignedBuilder, setHasAssignedBuilder] = useState(false);
+  const [hasUpgradedBuilding, setHasUpgradedBuilding] = useState(false);
+  const [enemyDisplayBounds, setEnemyDisplayBounds] = useState<{width: number; height: number; x: number; y: number}>({
+    width: 350,
+    height: 300,
+    x: 0,
+    y: 0,
+  });
   const lastTapTimeRef = useRef<number>(0);
   const enemyAreaRef = useRef<{x: number; y: number}>({x: 200, y: 250});
   const hasCheckedOfflineEarnings = useRef(false);
@@ -107,6 +125,22 @@ export const GameScreen: React.FC = () => {
 
   const removeResourcePopup = useCallback((id: string) => {
     setResourcePopups(prev => prev.filter(r => r.id !== id));
+  }, []);
+
+  // Weak point change handler
+  const handleWeakPointsChange = useCallback((points: WeakPoint[]) => {
+    setWeakPoints(points);
+  }, []);
+
+  // Handle enemy display layout to track bounds for weak point hit detection
+  const handleEnemyDisplayLayout = useCallback((event: {nativeEvent: {layout: {width: number; height: number; x: number; y: number}}}) => {
+    const {width, height, x, y} = event.nativeEvent.layout;
+    setEnemyDisplayBounds({width, height, x, y});
+  }, []);
+
+  // Handle dismissing tutorial tips
+  const handleDismissTip = useCallback((tipId: string) => {
+    setDismissedTips(prev => new Set([...prev, tipId]));
   }, []);
 
   // Game systems
@@ -271,12 +305,16 @@ export const GameScreen: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Listen for building evolution events
+  // Listen for building evolution events (includes new unlocks at tier 1)
   useEffect(() => {
-    const subscription = eventBus.on<{buildingId: string; newTier: BuildingEvolutionTier}>(
+    const subscription = eventBus.on<{buildingId: string; newTier: BuildingEvolutionTier; isNewUnlock?: boolean}>(
       GameEvents.BUILDING_EVOLVED,
       (data) => {
-        setBuildingEvolution(data);
+        setBuildingEvolution({
+          buildingId: data.buildingId,
+          newTier: data.newTier,
+          isNewUnlock: data.isNewUnlock ?? false,
+        });
       },
     );
 
@@ -338,6 +376,35 @@ export const GameScreen: React.FC = () => {
       }
       lastTapTimeRef.current = now;
 
+      // Track total taps for tutorial
+      setTotalTaps(prev => prev + 1);
+
+      // Check for weak point hit
+      let weakPointMultiplier = 1;
+      let hitWeakPoint = false;
+      if (tapX !== undefined && tapY !== undefined && weakPoints.length > 0) {
+        // Convert page coordinates to enemy display relative coordinates
+        const relativeX = tapX - enemyDisplayBounds.x;
+        const relativeY = tapY - enemyDisplayBounds.y;
+
+        const hitPoint = checkWeakPointHit(
+          relativeX,
+          relativeY,
+          weakPoints,
+          {width: enemyDisplayBounds.width, height: enemyDisplayBounds.height},
+        );
+
+        if (hitPoint) {
+          // Get the scanner building stats for damage multiplier
+          const scannerBuilding = currentBuildings.find(b => b.typeId === 'weak_point_scanner');
+          const scannerTier = scannerBuilding?.evolutionTier ?? 1;
+          const scannerLevel = scannerBuilding?.level ?? 1;
+          const scannerBuilders = scannerBuilding?.assignedBuilders ?? 0;
+          weakPointMultiplier = getWeakPointDamageMultiplier(scannerTier, scannerLevel, scannerBuilders);
+          hitWeakPoint = true;
+        }
+      }
+
       // Calculate prestige bonuses with fresh state
       const currentPrestigeBonuses = prestigeSystem.calculateBonuses(currentPlayer.prestigeUpgrades);
 
@@ -369,7 +436,8 @@ export const GameScreen: React.FC = () => {
         },
       );
 
-      const finalDamage = tapDamage * burst.multiplier;
+      // Apply weak point multiplier to final damage
+      const finalDamage = tapDamage * burst.multiplier * weakPointMultiplier;
       state.damageEnemy(finalDamage);
 
       // Calculate scrap from tap damage
@@ -386,20 +454,23 @@ export const GameScreen: React.FC = () => {
       // Spawn damage popup at tap location or default enemy area
       const x = tapX ?? enemyAreaRef.current.x + (Math.random() - 0.5) * 60;
       const y = tapY ?? enemyAreaRef.current.y + (Math.random() - 0.5) * 40;
-      spawnPopup(finalDamage, burst.triggered, x, y);
+      // Show as "burst" style if weak point hit for visual feedback
+      spawnPopup(finalDamage, burst.triggered || hitWeakPoint, x, y);
 
       // Spawn tap ripple effect
       if (tapX && tapY) {
         spawnTapRipple(tapX, tapY);
       }
     },
-    [combatSystem, prestigeSystem, spawnPopup, spawnTapRipple],
+    [combatSystem, prestigeSystem, spawnPopup, spawnTapRipple, weakPoints, enemyDisplayBounds],
   );
 
   // Handle builder assignment (directly through store since it has validation)
   const handleAssignBuilder = useCallback(
     (buildingId: string) => {
       assignBuilder(buildingId);
+      // Track for tutorial
+      setHasAssignedBuilder(true);
     },
     [assignBuilder],
   );
@@ -439,6 +510,8 @@ export const GameScreen: React.FC = () => {
       if (player.scrap >= cost) {
         setScrap(player.scrap - cost);
         upgradeBuilding(buildingId);
+        // Track for tutorial
+        setHasUpgradedBuilding(true);
       }
     },
     [buildings, player.scrap, setScrap, upgradeBuilding, getDiscountedUpgradeCost],
@@ -477,6 +550,21 @@ export const GameScreen: React.FC = () => {
   const upgradeStatus = prestigeSystem.getUpgradeStatus(player.blueprints, player.prestigeUpgrades);
   const prestigePreview = prestigeSystem.previewPrestige(currentWave);
 
+  // Build tutorial state for contextual tips
+  const tutorialState: TutorialState = {
+    currentWave,
+    scrap: player.scrap,
+    blueprints: player.blueprints,
+    totalTaps,
+    buildingsUnlocked: buildings.filter(b => b.isUnlocked).map(b => b.typeId),
+    buildingLevels: buildings.reduce((acc, b) => ({...acc, [b.typeId]: b.level}), {} as Record<string, number>),
+    hasAssignedBuilder,
+    hasUpgradedBuilding,
+    hasPurchasedPrestige: Object.values(player.prestigeUpgrades).some(level => level > 0),
+    prestigeCount: player.prestigeCount,
+    highestWave: currentWave, // Use current wave as highest for now
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ResourceDisplay
@@ -486,13 +574,34 @@ export const GameScreen: React.FC = () => {
         onSettingsPress={() => setShowSettings(true)}
       />
 
-      <EnemyDisplay
-        enemy={combat.currentEnemy}
-        waveTimer={combat.waveTimer}
-        waveTimerMax={combat.waveTimerMax}
-        currentWave={currentWave}
-        onTap={handleTap}
-      />
+      <View onLayout={handleEnemyDisplayLayout}>
+        <EnemyDisplay
+          enemy={combat.currentEnemy}
+          waveTimer={combat.waveTimer}
+          waveTimerMax={combat.waveTimerMax}
+          currentWave={currentWave}
+          onTap={handleTap}
+        />
+        {/* Weak Point Overlay - renders on top of enemy display */}
+        {(() => {
+          const scannerBuilding = buildings.find(b => b.typeId === 'weak_point_scanner');
+          const isUnlocked = scannerBuilding?.isUnlocked ?? false;
+          const scannerTier = scannerBuilding?.evolutionTier ?? 1;
+          const scannerLevel = scannerBuilding?.level ?? 1;
+          const scannerBuilders = scannerBuilding?.assignedBuilders ?? 0;
+
+          return (
+            <WeakPointOverlay
+              isActive={isUnlocked && combat.isActive && combat.currentEnemy !== null}
+              scannerTier={scannerTier}
+              scannerLevel={scannerLevel}
+              assignedBuilders={scannerBuilders}
+              onWeakPointsChange={handleWeakPointsChange}
+              bounds={{width: enemyDisplayBounds.width, height: enemyDisplayBounds.height}}
+            />
+          );
+        })()}
+      </View>
 
       <DamagePopupManager popups={popups} onPopupComplete={removePopup} />
 
@@ -548,7 +657,7 @@ export const GameScreen: React.FC = () => {
             // Use the appropriate prestige multiplier based on building role
             const prestigeMultiplier = (() => {
               switch (building.typeId) {
-                case 'turret_station':
+                case 'weak_point_scanner':
                   return prestigeBonuses.autoDamageMultiplier;
                 case 'training_facility':
                   return prestigeBonuses.tapPowerMultiplier;
@@ -655,12 +764,21 @@ export const GameScreen: React.FC = () => {
         onDismiss={() => setMilestoneUnlocked(null)}
       />
 
-      <BuildingEvolutionPopup
+      <BuildingEvolutionTooltip
         visible={buildingEvolution !== null}
-        buildingId={buildingEvolution?.buildingId ?? ''}
         newTier={buildingEvolution?.newTier ?? null}
+        isNewUnlock={buildingEvolution?.isNewUnlock ?? false}
         onDismiss={() => setBuildingEvolution(null)}
       />
+
+      {/* Don't show tutorial tips while building unlock/evolution tooltip is visible */}
+      {buildingEvolution === null && (
+        <TutorialManager
+          tutorialState={tutorialState}
+          dismissedTips={dismissedTips}
+          onDismissTip={handleDismissTip}
+        />
+      )}
 
       <SettingsModal
         visible={showSettings}

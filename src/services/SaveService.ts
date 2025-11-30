@@ -179,7 +179,7 @@ export class SaveService {
   private migrateBuildingsArray(state: GameState): GameState {
     const requiredBuildings = [
       {id: 'scrap_works_1', typeId: 'scrap_works', unlockWave: 1},
-      {id: 'turret_station_1', typeId: 'turret_station', unlockWave: 3},
+      {id: 'weak_point_scanner_1', typeId: 'weak_point_scanner', unlockWave: 3},
       {id: 'training_facility_1', typeId: 'training_facility', unlockWave: 5},
       {id: 'engineering_bay_1', typeId: 'engineering_bay', unlockWave: 10},
       {id: 'command_center_1', typeId: 'command_center', unlockWave: 20},
@@ -198,6 +198,16 @@ export class SaveService {
     const salvageYardIndex = updatedBuildings.findIndex(b => b.typeId === 'salvage_yard');
     if (salvageYardIndex !== -1) {
       updatedBuildings.splice(salvageYardIndex, 1);
+    }
+
+    // Migrate turret_station to weak_point_scanner (keeping progress)
+    const turretIndex = updatedBuildings.findIndex(b => b.typeId === 'turret_station');
+    if (turretIndex !== -1) {
+      updatedBuildings[turretIndex] = {
+        ...updatedBuildings[turretIndex],
+        id: 'weak_point_scanner_1',
+        typeId: 'weak_point_scanner',
+      };
     }
 
     // Add any missing buildings

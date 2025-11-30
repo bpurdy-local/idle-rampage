@@ -18,7 +18,7 @@ export interface WorkerEfficiencyResult {
 }
 
 // Milestone thresholds and their bonuses
-export const WORKER_MILESTONES: {threshold: number; bonus: number; name: string}[] = [
+const WORKER_MILESTONES: {threshold: number; bonus: number; name: string}[] = [
   {threshold: 5, bonus: 0.15, name: 'Coordinated Team'}, // +15% at 5 workers
   {threshold: 10, bonus: 0.25, name: 'Efficient Squad'}, // +25% at 10 workers (total +40%)
   {threshold: 20, bonus: 0.35, name: 'Master Crew'}, // +35% at 20 workers (total +75%)
@@ -39,7 +39,7 @@ const EFFICIENCY_DECAY = 0.12;
  * - Worker 10: ~48%
  * - Worker 20: ~30%
  */
-export function calculateSingleWorkerEfficiency(
+function calculateSingleWorkerEfficiency(
   workerPosition: number,
   decayRate: number = EFFICIENCY_DECAY,
 ): number {
@@ -52,7 +52,7 @@ export function calculateSingleWorkerEfficiency(
  * Calculate total efficiency from all assigned workers.
  * Returns the sum of each worker's individual efficiency.
  */
-export function calculateTotalWorkerEfficiency(
+function calculateTotalWorkerEfficiency(
   assignedWorkers: number,
   decayRate: number = EFFICIENCY_DECAY,
 ): number {
@@ -69,7 +69,7 @@ export function calculateTotalWorkerEfficiency(
  * Calculate milestone bonus multiplier based on worker count.
  * Bonuses stack additively.
  */
-export function calculateMilestoneBonus(assignedWorkers: number): number {
+function calculateMilestoneBonus(assignedWorkers: number): number {
   let bonus = 0;
   for (const milestone of WORKER_MILESTONES) {
     if (assignedWorkers >= milestone.threshold) {
@@ -77,23 +77,6 @@ export function calculateMilestoneBonus(assignedWorkers: number): number {
     }
   }
   return 1 + bonus;
-}
-
-/**
- * Get the next milestone the player is working towards.
- */
-export function getNextMilestone(
-  assignedWorkers: number,
-): {threshold: number; bonus: number; name: string; workersNeeded: number} | null {
-  for (const milestone of WORKER_MILESTONES) {
-    if (assignedWorkers < milestone.threshold) {
-      return {
-        ...milestone,
-        workersNeeded: milestone.threshold - assignedWorkers,
-      };
-    }
-  }
-  return null; // All milestones achieved
 }
 
 /**

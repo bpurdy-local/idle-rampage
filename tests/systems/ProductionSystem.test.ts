@@ -202,13 +202,13 @@ describe('ProductionSystem', () => {
   describe('unlockBuildingsForWave', () => {
     it('unlocks buildings when wave threshold reached', () => {
       const buildings = system.initializeBuildings();
-      const turretStation = buildings.find(b => b.typeId === 'turret_station');
+      const weakPointScanner = buildings.find(b => b.typeId === 'weak_point_scanner');
 
-      expect(turretStation?.isUnlocked).toBe(false);
+      expect(weakPointScanner?.isUnlocked).toBe(false);
 
       system.unlockBuildingsForWave(buildings, 3);
 
-      expect(turretStation?.isUnlocked).toBe(true);
+      expect(weakPointScanner?.isUnlocked).toBe(true);
     });
 
     it('returns list of newly unlocked buildings', () => {
