@@ -38,6 +38,9 @@ import {
   getWeakPointDamageMultiplier,
   WeakPoint,
   OnboardingTutorial,
+  SpecialEffectNotification,
+  SpecialEffectNotificationData,
+  WaveExtendFlash,
 } from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
 import {getScaledRewardAmount} from '../data/dailyRewards';
@@ -59,6 +62,7 @@ import {ProductionSystem} from '../systems/ProductionSystem';
 import {CombatSystem} from '../systems/CombatSystem';
 import {WaveManager} from '../systems/WaveManager';
 import {PrestigeSystem} from '../systems/PrestigeSystem';
+import {SpecialEffectsSystem} from '../systems/SpecialEffectsSystem';
 import {DEBUG_CONFIG} from '../data/debugConfig';
 import {saveService} from '../services/SaveService';
 
@@ -90,6 +94,10 @@ export const GameScreen: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [weakPoints, setWeakPoints] = useState<WeakPoint[]>([]);
+  const [specialEffectNotifications, setSpecialEffectNotifications] = useState<SpecialEffectNotificationData[]>([]);
+  const [showWaveExtendFlash, setShowWaveExtendFlash] = useState(false);
+  const [waveExtendBonusSeconds, setWaveExtendBonusSeconds] = useState(0);
+  const specialEffectNotificationIdRef = useRef(0);
   const [enemyDisplayBounds, setEnemyDisplayBounds] = useState<{width: number; height: number; x: number; y: number}>({
     width: 350,
     height: 300,
@@ -138,6 +146,7 @@ export const GameScreen: React.FC = () => {
   const [combatSystem] = useState(() => new CombatSystem());
   const [waveManager] = useState(() => new WaveManager());
   const [prestigeSystem] = useState(() => new PrestigeSystem());
+  const [specialEffectsSystem] = useState(() => new SpecialEffectsSystem());
 
   // Store state
   const {
@@ -208,15 +217,42 @@ export const GameScreen: React.FC = () => {
     // Wave failed - timer ran out
   }, []);
 
+  // Special effect callbacks
+  const handleScrapFind = useCallback(
+    (event: {amount: number; buildingName: string}) => {
+      const id = `special_${specialEffectNotificationIdRef.current++}`;
+      setSpecialEffectNotifications(prev => [
+        ...prev.slice(-2),
+        {id, effectType: 'scrap_find', amount: event.amount, buildingName: event.buildingName},
+      ]);
+    },
+    [],
+  );
+
+  const handleWaveExtend = useCallback(
+    (event: {bonusSeconds: number}) => {
+      setWaveExtendBonusSeconds(Math.round(event.bonusSeconds));
+      setShowWaveExtendFlash(true);
+    },
+    [],
+  );
+
+  const removeSpecialEffectNotification = useCallback((id: string) => {
+    setSpecialEffectNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
   // Start game loop with extracted tick logic
   useGameTick({
     productionSystem,
     combatSystem,
     waveManager,
     prestigeSystem,
+    specialEffectsSystem,
     onWaveComplete: handleWaveComplete,
     onWaveFailed: handleWaveFailed,
     onLuckyDrop: applyDropReward,
+    onScrapFind: handleScrapFind,
+    onWaveExtend: handleWaveExtend,
     tickRate: 100,
   });
 
@@ -229,6 +265,8 @@ export const GameScreen: React.FC = () => {
       combat: state.combat,
       currentWave: state.currentWave,
       dailyRewards: state.dailyRewards,
+      hasCompletedOnboarding: state.hasCompletedOnboarding,
+      specialEffects: state.specialEffects,
     }));
 
     return () => saveService.stopAutoSave();
@@ -604,6 +642,21 @@ export const GameScreen: React.FC = () => {
           onComplete={handleDropNotificationComplete}
         />
       )}
+
+      {/* Special Effect Notifications */}
+      {specialEffectNotifications.map(notification => (
+        <SpecialEffectNotification
+          key={notification.id}
+          data={notification}
+          onComplete={removeSpecialEffectNotification}
+        />
+      ))}
+
+      <WaveExtendFlash
+        visible={showWaveExtendFlash}
+        bonusSeconds={waveExtendBonusSeconds}
+        onComplete={() => setShowWaveExtendFlash(false)}
+      />
 
       <View style={styles.tabs}>
         <TouchableOpacity style={styles.tab}>

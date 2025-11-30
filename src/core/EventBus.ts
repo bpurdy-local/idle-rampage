@@ -58,6 +58,10 @@ export const GameEvents = {
   APP_FOREGROUNDED: 'app_foregrounded',
   LUCKY_DROP: 'lucky_drop',
   MILESTONE_REACHED: 'milestone_reached',
+  SPECIAL_EFFECT_TRIGGERED: 'special_effect_triggered',
+  SCRAP_BONUS_FOUND: 'scrap_bonus_found',
+  CRITICAL_WEAKNESS_SPAWNED: 'critical_weakness_spawned',
+  WAVE_EXTENDED: 'wave_extended',
 } as const;
 
 export type GameEventType = typeof GameEvents[keyof typeof GameEvents];

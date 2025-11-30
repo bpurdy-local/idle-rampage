@@ -1,4 +1,4 @@
-import {CombatState, EnemyState} from '../core/GameState';
+import {BuildingState, CombatState, EnemyState} from '../core/GameState';
 import {
   getEnemyTierForWave,
   BOSS_CONFIG,
@@ -10,6 +10,7 @@ import {createEnemy, Enemy} from '../models/Enemy';
 import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {getUpgradeEffect} from '../models/PrestigeUpgrade';
 import {eventBus, GameEvents} from '../core/EventBus';
+import {SpecialEffectsSystem} from './SpecialEffectsSystem';
 
 export interface WaveReward {
   scrap: number;
@@ -151,16 +152,34 @@ export class WaveManager {
   startWave(
     wave: number,
     combat: CombatState,
-  ): {enemy: EnemyState; timer: number} {
+    buildings?: BuildingState[],
+  ): {enemy: EnemyState; timer: number; waveExtended: boolean; bonusSeconds: number} {
     const enemy = this.spawnEnemyForWave(wave);
-    const timer = this.calculateWaveTimer(wave);
+    let timer = this.calculateWaveTimer(wave);
+    let waveExtended = false;
+    let bonusSeconds = 0;
+
+    if (buildings) {
+      const specialEffectsSystem = new SpecialEffectsSystem();
+      const extensionResult = specialEffectsSystem.checkWaveExtensionFromBuildings(buildings, timer);
+      if (extensionResult.triggered) {
+        bonusSeconds = extensionResult.bonusSeconds;
+        timer += bonusSeconds;
+        waveExtended = true;
+        eventBus.emit(GameEvents.WAVE_EXTENDED, {
+          wave,
+          bonusSeconds,
+          newTimer: timer,
+        });
+      }
+    }
 
     combat.currentEnemy = enemy;
     combat.waveTimer = timer;
     combat.waveTimerMax = timer;
     combat.isActive = true;
 
-    return {enemy, timer};
+    return {enemy, timer, waveExtended, bonusSeconds};
   }
 
   completeWave(

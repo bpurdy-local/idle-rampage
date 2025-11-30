@@ -16,6 +16,7 @@ export interface WeakPoint {
   y: number; // percentage 0-100
   size: number; // radius in pixels
   expiresAt: number;
+  isCritical?: boolean; // critical weak points deal extra damage
 }
 
 interface WeakPointOverlayProps {
@@ -31,6 +32,8 @@ interface WeakPointOverlayProps {
   onWeakPointsChange: (points: WeakPoint[]) => void;
   /** Bounds of the tappable area (enemy display) */
   bounds: {width: number; height: number};
+  /** Chance for spawned weak points to be critical (0-1) */
+  criticalChance?: number;
 }
 
 // Base config per tier (size and duration only - count/damage scale with level+builders)
@@ -77,10 +80,14 @@ const calculateDamageMultiplier = (tier: number, level: number, builders: number
   return Math.min(MAX_DAMAGE_MULTIPLIER, baseDamage + levelBonus + builderBonus);
 };
 
+const CRITICAL_COLOR = '#FFD700'; // Gold color for critical weak points
+const NORMAL_COLOR = '#00ffff'; // Cyan color for normal weak points
+
 const WeakPointMarker: React.FC<{
   point: WeakPoint;
   onExpire: (id: string) => void;
 }> = ({point, onExpire}) => {
+  const color = point.isCritical ? CRITICAL_COLOR : NORMAL_COLOR;
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.3);
   const pulseOpacity = useSharedValue(0.8);
@@ -136,6 +143,9 @@ const WeakPointMarker: React.FC<{
     opacity: pulseOpacity.value,
   }));
 
+  const sizeMultiplier = point.isCritical ? 1.2 : 1;
+  const adjustedSize = point.size * sizeMultiplier;
+
   return (
     <Animated.View
       style={[
@@ -143,22 +153,28 @@ const WeakPointMarker: React.FC<{
         {
           left: `${point.x}%`,
           top: `${point.y}%`,
-          width: point.size * 2,
-          height: point.size * 2,
-          marginLeft: -point.size,
-          marginTop: -point.size,
+          width: adjustedSize * 2,
+          height: adjustedSize * 2,
+          marginLeft: -adjustedSize,
+          marginTop: -adjustedSize,
         },
         containerStyle,
       ]}
       pointerEvents="none"
     >
       {/* Outer pulse ring */}
-      <Animated.View style={[styles.pulseRing, pulseStyle]} />
+      <Animated.View
+        style={[
+          styles.pulseRing,
+          {borderColor: color, backgroundColor: `${color}15`},
+          pulseStyle,
+        ]}
+      />
       {/* Inner target */}
       <View style={styles.innerTarget}>
-        <View style={styles.crosshairH} />
-        <View style={styles.crosshairV} />
-        <View style={styles.centerDot} />
+        <View style={[styles.crosshairH, {backgroundColor: color}]} />
+        <View style={[styles.crosshairV, {backgroundColor: color}]} />
+        <View style={[styles.centerDot, point.isCritical && styles.criticalCenterDot]} />
       </View>
     </Animated.View>
   );
@@ -171,6 +187,7 @@ export const WeakPointOverlay: React.FC<WeakPointOverlayProps> = ({
   assignedBuilders,
   onWeakPointsChange,
   bounds,
+  criticalChance = 0,
 }) => {
   const [weakPoints, setWeakPoints] = useState<WeakPoint[]>([]);
   const spawnIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -192,6 +209,9 @@ export const WeakPointOverlay: React.FC<WeakPointOverlayProps> = ({
         return active;
       }
 
+      // Determine if this weak point is critical
+      const isCritical = criticalChance > 0 && Math.random() < criticalChance;
+
       // Spawn new weak point at random position (avoiding edges)
       const padding = 15; // percentage from edges
       const newPoint: WeakPoint = {
@@ -200,11 +220,12 @@ export const WeakPointOverlay: React.FC<WeakPointOverlayProps> = ({
         y: padding + Math.random() * (100 - padding * 2),
         size: config.baseSize + Math.random() * 8,
         expiresAt: now + config.duration,
+        isCritical,
       };
 
       return [...active, newPoint];
     });
-  }, [maxPoints, config.baseSize, config.duration]);
+  }, [maxPoints, config.baseSize, config.duration, criticalChance]);
 
   const handleExpire = useCallback((id: string) => {
     setWeakPoints(current => current.filter(p => p.id !== id));
@@ -299,6 +320,16 @@ export const getWeakPointDamageMultiplier = (
   return calculateDamageMultiplier(tier, level, assignedBuilders);
 };
 
+/**
+ * Get the critical weakness damage multiplier from config.
+ * This multiplies with the normal weak point damage for critical hits.
+ */
+export const getCriticalWeaknessDamageMultiplier = (): number => {
+  // Import dynamically to avoid circular dependencies
+  const {SPECIAL_EFFECT_CONFIG} = require('../../data/specialEffectConfig');
+  return SPECIAL_EFFECT_CONFIG.criticalWeakness.damageMultiplier;
+};
+
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
@@ -342,5 +373,11 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: '#ff0066',
+  },
+  criticalCenterDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FF4500',
   },
 });

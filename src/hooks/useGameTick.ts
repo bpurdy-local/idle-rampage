@@ -4,24 +4,37 @@
  */
 import {useCallback} from 'react';
 import {useGameStore} from '../stores/gameStore';
-import {EVOLVABLE_BUILDINGS, calculateShieldGeneratorBonus} from '../data/buildings';
+import {EVOLVABLE_BUILDINGS, calculateShieldGeneratorBonus, getEvolvableBuildingById} from '../data/buildings';
 import {PRESTIGE_TIERS} from '../data/prestigeMilestones';
 import {ProductionSystem} from '../systems/ProductionSystem';
 import {CombatSystem, DAMAGE_SCRAP_PERCENT} from '../systems/CombatSystem';
 import {WaveManager} from '../systems/WaveManager';
 import {PrestigeSystem} from '../systems/PrestigeSystem';
+import {SpecialEffectsSystem} from '../systems/SpecialEffectsSystem';
 import {luckyDropSystem, DropResult} from '../systems/LuckyDropSystem';
 import {DEBUG_CONFIG} from '../data/debugConfig';
 import {useGameLoop} from './useGameLoop';
+
+export interface ScrapFindEvent {
+  amount: number;
+  buildingName: string;
+}
+
+export interface WaveExtendEvent {
+  bonusSeconds: number;
+}
 
 export interface UseGameTickOptions {
   productionSystem: ProductionSystem;
   combatSystem: CombatSystem;
   waveManager: WaveManager;
   prestigeSystem: PrestigeSystem;
+  specialEffectsSystem: SpecialEffectsSystem;
   onWaveComplete: (reward: number, isBoss: boolean) => void;
   onWaveFailed: () => void;
   onLuckyDrop: (drop: DropResult) => void;
+  onScrapFind?: (event: ScrapFindEvent) => void;
+  onWaveExtend?: (event: WaveExtendEvent) => void;
   tickRate?: number;
 }
 
@@ -30,16 +43,19 @@ export function useGameTick({
   combatSystem,
   waveManager,
   prestigeSystem,
+  specialEffectsSystem,
   onWaveComplete,
   onWaveFailed,
   onLuckyDrop,
+  onScrapFind,
+  onWaveExtend,
   tickRate = 100,
 }: UseGameTickOptions) {
   const handleTick = useCallback(
     (deltaMs: number) => {
       // Get fresh state from store to avoid stale closure issues
       const state = useGameStore.getState();
-      const {combat, player, buildings, currentWave} = state;
+      const {combat, player, buildings, currentWave, specialEffects} = state;
 
       // Calculate prestige bonuses with fresh state
       const prestigeBonuses = prestigeSystem.calculateBonuses(player.prestigeUpgrades);
@@ -74,6 +90,37 @@ export function useGameTick({
         state.tickBoosts(deltaMs);
       }
 
+      // === Scrap Find Special Effect (Scrap Works) ===
+      const scrapWorksBuilding = buildings.find(b => b.typeId === 'scrap_works' && b.isUnlocked);
+      if (scrapWorksBuilding && combat.currentEnemy) {
+        const scrapFindResult = specialEffectsSystem.processScrapFind(
+          scrapWorksBuilding,
+          combat.currentEnemy.reward,
+          specialEffects.lastScrapFindTime,
+          Date.now(),
+          prestigeBonuses.productionMultiplier,
+          prestigeBonuses.waveRewardsMultiplier,
+        );
+
+        if (scrapFindResult.triggered && scrapFindResult.amount > 0) {
+          const debugMultiplier = DEBUG_CONFIG.ENABLED ? DEBUG_CONFIG.SCRAP_MULTIPLIER : 1;
+          state.addScrap(scrapFindResult.amount * debugMultiplier);
+          state.recordScrapFindTrigger(Date.now());
+
+          // Get building name for notification
+          const evolvable = getEvolvableBuildingById(scrapWorksBuilding.typeId);
+          const tierData = evolvable?.tiers[scrapWorksBuilding.evolutionTier - 1];
+          const buildingName = tierData?.name ?? 'Scrap Works';
+
+          if (onScrapFind) {
+            onScrapFind({
+              amount: scrapFindResult.amount * debugMultiplier,
+              buildingName,
+            });
+          }
+        }
+      }
+
       // === Combat Tick ===
       if (combat.isActive && combat.currentEnemy) {
         handleCombatTick(
@@ -87,9 +134,11 @@ export function useGameTick({
           prestigeBonuses,
           combatSystem,
           waveManager,
+          specialEffectsSystem,
           onWaveComplete,
           onWaveFailed,
           onLuckyDrop,
+          onWaveExtend,
         );
       } else if (!combat.isActive) {
         // Start first wave (only runs once at game start)
@@ -107,9 +156,12 @@ export function useGameTick({
       combatSystem,
       waveManager,
       prestigeSystem,
+      specialEffectsSystem,
       onWaveComplete,
       onWaveFailed,
       onLuckyDrop,
+      onScrapFind,
+      onWaveExtend,
     ],
   );
 
@@ -130,9 +182,11 @@ function handleCombatTick(
   prestigeBonuses: ReturnType<PrestigeSystem['calculateBonuses']>,
   combatSystem: CombatSystem,
   waveManager: WaveManager,
+  specialEffectsSystem: SpecialEffectsSystem,
   onWaveComplete: (reward: number, isBoss: boolean) => void,
   onWaveFailed: () => void,
   onLuckyDrop: (drop: DropResult) => void,
+  onWaveExtend?: (event: WaveExtendEvent) => void,
 ) {
   if (!combat.currentEnemy) return;
 
@@ -182,8 +236,10 @@ function handleCombatTick(
       currentWave,
       prestigeBonuses,
       waveManager,
+      specialEffectsSystem,
       onWaveComplete,
       onLuckyDrop,
+      onWaveExtend,
     );
   } else if (combatResult.timerExpired) {
     handleWaveFailed(state, buildings, currentWave, waveManager, onWaveFailed);
@@ -200,8 +256,10 @@ function handleWaveComplete(
   currentWave: number,
   prestigeBonuses: ReturnType<PrestigeSystem['calculateBonuses']>,
   waveManager: WaveManager,
+  specialEffectsSystem: SpecialEffectsSystem,
   onWaveComplete: (reward: number, isBoss: boolean) => void,
   onLuckyDrop: (drop: DropResult) => void,
+  onWaveExtend?: (event: WaveExtendEvent) => void,
 ) {
   if (!combat.currentEnemy) return;
 
@@ -231,7 +289,18 @@ function handleWaveComplete(
   const nextEnemy = waveManager.spawnEnemyForWave(nextWave);
   const baseTimer = waveManager.calculateWaveTimer(nextWave);
   const shieldBonus = calculateShieldGeneratorBonus(buildings);
-  const nextTimer = baseTimer + shieldBonus;
+
+  // Check for wave extension from Shield Generator special effect
+  const waveExtendResult = specialEffectsSystem.checkWaveExtensionFromBuildings(buildings, baseTimer);
+  let nextTimer = baseTimer + shieldBonus;
+
+  if (waveExtendResult.triggered) {
+    nextTimer += waveExtendResult.bonusSeconds;
+    if (onWaveExtend) {
+      onWaveExtend({bonusSeconds: waveExtendResult.bonusSeconds});
+    }
+  }
+
   state.setCurrentEnemy(nextEnemy);
   state.updateCombatStats({waveTimer: nextTimer, waveTimerMax: nextTimer});
 }

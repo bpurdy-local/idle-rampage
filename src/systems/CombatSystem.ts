@@ -4,6 +4,7 @@ import {calculateProduction} from '../models/Building';
 import {PRESTIGE_UPGRADES} from '../data/prestigeUpgrades';
 import {getUpgradeEffect} from '../models/PrestigeUpgrade';
 import {eventBus, GameEvents} from '../core/EventBus';
+import {SpecialEffectsSystem} from './SpecialEffectsSystem';
 
 export interface CombatBonuses {
   prestigeAutoDamage: number;
@@ -119,8 +120,9 @@ export class CombatSystem {
     burstChance: number,
     burstMultiplier: number,
     bonuses: CombatBonuses,
+    trainingFacilityBoost: number = 0,
   ): {triggered: boolean; multiplier: number} {
-    const effectiveChance = burstChance + bonuses.prestigeBurstChance;
+    const effectiveChance = burstChance + bonuses.prestigeBurstChance + trainingFacilityBoost;
     const triggered = Math.random() < effectiveChance;
     const multiplier = triggered
       ? burstMultiplier * bonuses.prestigeBurstDamage
@@ -241,10 +243,14 @@ export class CombatSystem {
     const damagePerSecond = this.calculateAutoDamage(buildings, bonuses);
     const tickDamage = (damagePerSecond * deltaTime) / 1000;
 
+    const specialEffectsSystem = new SpecialEffectsSystem();
+    const trainingFacilityBoost = specialEffectsSystem.getTotalBurstBoost(buildings);
+
     const burst = this.checkBurstAttack(
       combat.burstChance,
       combat.burstMultiplier,
       bonuses,
+      trainingFacilityBoost,
     );
 
     const totalDamage = Math.floor(tickDamage * burst.multiplier);

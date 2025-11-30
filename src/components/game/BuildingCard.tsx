@@ -9,10 +9,11 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import {BuildingState} from '../../core/GameState';
-import {BuildingType} from '../../models/Building';
+import {BuildingType, SpecialEffectType} from '../../models/Building';
 import {ProgressBar} from '../common/ProgressBar';
 import {formatNumber} from '../../utils/formatters';
 import {getTieredBuildingName, getTierColor} from '../../data/buildings';
+import {SPECIAL_EFFECT_CONFIG} from '../../data/specialEffectConfig';
 
 interface BuildingCardProps {
   building: BuildingState;
@@ -33,6 +34,8 @@ interface BuildingCardProps {
   noWorkers?: boolean;
   /** The building's unique typeId for role-specific display */
   buildingTypeId?: string;
+  /** Special effect type for this building (if any) */
+  specialEffectType?: SpecialEffectType;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -54,6 +57,7 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   nextEvolutionWave,
   noWorkers = false,
   buildingTypeId,
+  specialEffectType,
 }) => {
   const canAssign = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   const canUnassign = !noWorkers && building.assignedBuilders > 0;
@@ -79,6 +83,57 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   };
 
   const outputDisplay = getOutputDisplay();
+
+  const getSpecialEffectDisplay = (): {label: string; value: string} | null => {
+    if (!specialEffectType) return null;
+
+    const level = building.level;
+    const workers = building.assignedBuilders;
+    const tier = evolutionTier;
+
+    switch (specialEffectType) {
+      case 'scrap_find': {
+        const config = SPECIAL_EFFECT_CONFIG.scrapFind;
+        const cooldownMs = Math.max(
+          config.minCooldownMs,
+          config.baseCooldownMs - (level - 1) * config.cooldownPerLevelMs - workers * config.cooldownPerWorkerMs,
+        );
+        const rewardPercent = config.baseRewardPercent * (config.tierMultipliers[tier - 1] ?? 1);
+        return {
+          label: 'Scrap Find',
+          value: `${Math.round(rewardPercent * 100)}% every ${(cooldownMs / 1000).toFixed(0)}s`,
+        };
+      }
+      case 'burst_boost': {
+        const config = SPECIAL_EFFECT_CONFIG.burstBoost;
+        const chance = config.baseChance + (level - 1) * config.chancePerLevel + workers * config.chancePerWorker + (tier - 1) * config.chancePerTier;
+        return {
+          label: 'Burst Boost',
+          value: `+${(chance * 100).toFixed(1)}%`,
+        };
+      }
+      case 'critical_weakness': {
+        const config = SPECIAL_EFFECT_CONFIG.criticalWeakness;
+        const chance = config.baseChance + (level - 1) * config.chancePerLevel + workers * config.chancePerWorker + (tier - 1) * config.chancePerTier;
+        return {
+          label: 'Critical',
+          value: `${(chance * 100).toFixed(0)}% for ${config.damageMultiplier}x`,
+        };
+      }
+      case 'wave_extend': {
+        const config = SPECIAL_EFFECT_CONFIG.waveExtend;
+        const chance = config.baseChance + (level - 1) * config.chancePerLevel + (tier - 1) * config.chancePerTier;
+        return {
+          label: 'Wave Ext.',
+          value: `${(chance * 100).toFixed(0)}% chance`,
+        };
+      }
+      default:
+        return null;
+    }
+  };
+
+  const specialEffectDisplay = getSpecialEffectDisplay();
 
   // Get tiered building name and color based on prestige
   const tieredName = getTieredBuildingName(buildingType.name, prestigeCount);
@@ -248,6 +303,12 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
           <Text style={styles.statLabel}>{outputDisplay.label}</Text>
           <Text style={styles.statValue}>{outputDisplay.value}</Text>
         </View>
+        {specialEffectDisplay && (
+          <View style={styles.stat}>
+            <Text style={[styles.statLabel, styles.specialEffectLabel]}>{specialEffectDisplay.label}</Text>
+            <Text style={[styles.statValue, styles.specialEffectValue]}>{specialEffectDisplay.value}</Text>
+          </View>
+        )}
       </View>
 
       {building.upgradeProgress > 0 && (
@@ -378,6 +439,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  specialEffectLabel: {
+    color: '#FFD700',
+  },
+  specialEffectValue: {
+    color: '#FFD700',
+    fontSize: 11,
   },
   progressContainer: {
     marginBottom: 8,

@@ -1,5 +1,15 @@
 import {calculateWorkerEfficiency} from '../systems/WorkerEfficiency';
 
+export type SpecialEffectType =
+  | 'scrap_find'
+  | 'burst_boost'
+  | 'critical_weakness'
+  | 'wave_extend';
+
+export interface SpecialEffectDefinition {
+  type: SpecialEffectType;
+}
+
 export type BuildingRole = 'production' | 'combat' | 'utility';
 
 /**
@@ -14,6 +24,7 @@ export interface BuildingEvolutionTier {
   baseCost: number;
   iconName: string;
   color: string;
+  specialEffect?: SpecialEffectDefinition;
 }
 
 /**

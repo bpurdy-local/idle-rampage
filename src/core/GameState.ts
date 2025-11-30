@@ -72,6 +72,11 @@ export interface DailyRewardState {
   hasClaimedToday: boolean;
 }
 
+export interface SpecialEffectState {
+  lastScrapFindTime: number;
+  waveExtensionApplied: boolean;
+}
+
 export interface GameState {
   player: PlayerState;
   buildings: BuildingState[];
@@ -79,6 +84,7 @@ export interface GameState {
   currentWave: number;
   dailyRewards: DailyRewardState;
   hasCompletedOnboarding: boolean;
+  specialEffects: SpecialEffectState;
 }
 
 export const createInitialGameState = (): GameState => ({
@@ -181,4 +187,8 @@ export const createInitialGameState = (): GameState => ({
     hasClaimedToday: false,
   },
   hasCompletedOnboarding: false,
+  specialEffects: {
+    lastScrapFindTime: 0,
+    waveExtensionApplied: false,
+  },
 });

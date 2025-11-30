@@ -5,6 +5,7 @@ import {
   EnemyState,
   BoostState,
   DailyRewardState,
+  SpecialEffectState,
   createInitialGameState,
 } from '../core/GameState';
 import {eventBus, GameEvents} from '../core/EventBus';
@@ -55,6 +56,10 @@ interface GameActions {
   resetDailyClaimFlag: () => void;
 
   completeOnboarding: () => void;
+
+  updateSpecialEffects: (updates: Partial<SpecialEffectState>) => void;
+  recordScrapFindTrigger: (time: number) => void;
+  setWaveExtensionApplied: (applied: boolean) => void;
 
   getState: () => GameState;
 }
@@ -464,6 +469,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       })),
       combat: initialState.combat,
       currentWave: 1,
+      specialEffects: initialState.specialEffects,
     });
 
     eventBus.emit(GameEvents.PRESTIGE_TRIGGERED, {
@@ -495,8 +501,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   completeOnboarding: () => set({hasCompletedOnboarding: true}),
 
+  updateSpecialEffects: (updates: Partial<SpecialEffectState>) => {
+    const state = get();
+    set({
+      specialEffects: {
+        ...state.specialEffects,
+        ...updates,
+      },
+    });
+  },
+
+  recordScrapFindTrigger: (time: number) => {
+    const state = get();
+    set({
+      specialEffects: {
+        ...state.specialEffects,
+        lastScrapFindTime: time,
+      },
+    });
+    eventBus.emit(GameEvents.SCRAP_BONUS_FOUND, {time});
+  },
+
+  setWaveExtensionApplied: (applied: boolean) => {
+    const state = get();
+    set({
+      specialEffects: {
+        ...state.specialEffects,
+        waveExtensionApplied: applied,
+      },
+    });
+  },
+
   getState: () => {
-    const {player, buildings, combat, currentWave, dailyRewards, hasCompletedOnboarding} = get();
-    return {player, buildings, combat, currentWave, dailyRewards, hasCompletedOnboarding};
+    const {player, buildings, combat, currentWave, dailyRewards, hasCompletedOnboarding, specialEffects} = get();
+    return {player, buildings, combat, currentWave, dailyRewards, hasCompletedOnboarding, specialEffects};
   },
 }));

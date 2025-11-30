@@ -26,6 +26,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 75,
         iconName: 'cog',
         color: '#8B4513',
+        specialEffect: {type: 'scrap_find'},
       },
       {
         tier: 2,
@@ -36,6 +37,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 1500,
         iconName: 'recycle',
         color: '#228B22',
+        specialEffect: {type: 'scrap_find'},
       },
       {
         tier: 3,
@@ -46,6 +48,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 20000,
         iconName: 'fire',
         color: '#4682B4',
+        specialEffect: {type: 'scrap_find'},
       },
       {
         tier: 4,
@@ -56,6 +59,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 400000,
         iconName: 'industry',
         color: '#9932CC',
+        specialEffect: {type: 'scrap_find'},
       },
       {
         tier: 5,
@@ -66,6 +70,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 8000000,
         iconName: 'city',
         color: '#FFD700',
+        specialEffect: {type: 'scrap_find'},
       },
     ],
   },
@@ -84,6 +89,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 300,
         iconName: 'crosshairs',
         color: '#00CED1',
+        specialEffect: {type: 'critical_weakness'},
       },
       {
         tier: 2,
@@ -94,6 +100,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 3000,
         iconName: 'bullseye',
         color: '#20B2AA',
+        specialEffect: {type: 'critical_weakness'},
       },
       {
         tier: 3,
@@ -104,6 +111,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 50000,
         iconName: 'satellite-dish',
         color: '#4682B4',
+        specialEffect: {type: 'critical_weakness'},
       },
       {
         tier: 4,
@@ -114,6 +122,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 1000000,
         iconName: 'brain',
         color: '#9370DB',
+        specialEffect: {type: 'critical_weakness'},
       },
       {
         tier: 5,
@@ -124,6 +133,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 20000000,
         iconName: 'atom',
         color: '#FF1493',
+        specialEffect: {type: 'critical_weakness'},
       },
     ],
   },
@@ -142,6 +152,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 200,
         iconName: 'dumbbell',
         color: '#FF6B35',
+        specialEffect: {type: 'burst_boost'},
       },
       {
         tier: 2,
@@ -152,6 +163,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 5000,
         iconName: 'graduation-cap',
         color: '#20B2AA',
+        specialEffect: {type: 'burst_boost'},
       },
       {
         tier: 3,
@@ -162,6 +174,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 75000,
         iconName: 'medal',
         color: '#DAA520',
+        specialEffect: {type: 'burst_boost'},
       },
       {
         tier: 4,
@@ -172,6 +185,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 1500000,
         iconName: 'user-graduate',
         color: '#8B008B',
+        specialEffect: {type: 'burst_boost'},
       },
       {
         tier: 5,
@@ -182,6 +196,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 30000000,
         iconName: 'trophy',
         color: '#FFD700',
+        specialEffect: {type: 'burst_boost'},
       },
     ],
   },
@@ -309,6 +324,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 8000,
         iconName: 'shield-alt',
         color: '#4169E1',
+        specialEffect: {type: 'wave_extend'},
       },
       {
         tier: 2,
@@ -319,6 +335,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 200000,
         iconName: 'shield-virus',
         color: '#6495ED',
+        specialEffect: {type: 'wave_extend'},
       },
       {
         tier: 3,
@@ -329,6 +346,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 2500000,
         iconName: 'circle-notch',
         color: '#00BFFF',
+        specialEffect: {type: 'wave_extend'},
       },
       {
         tier: 4,
@@ -339,6 +357,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         baseCost: 50000000,
         iconName: 'atom',
         color: '#7B68EE',
+        specialEffect: {type: 'wave_extend'},
       },
     ],
   },
