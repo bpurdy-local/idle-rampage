@@ -90,7 +90,6 @@ export const GameScreen: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [weakPoints, setWeakPoints] = useState<WeakPoint[]>([]);
-  const [showOnboarding, setShowOnboarding] = useState(true);
   const [enemyDisplayBounds, setEnemyDisplayBounds] = useState<{width: number; height: number; x: number; y: number}>({
     width: 350,
     height: 300,
@@ -134,12 +133,6 @@ export const GameScreen: React.FC = () => {
     setEnemyDisplayBounds({width, height, x, y});
   }, []);
 
-  // Handle onboarding completion
-  const handleOnboardingComplete = useCallback(() => {
-    setShowOnboarding(false);
-    // TODO: Persist this to AsyncStorage so it doesn't show again
-  }, []);
-
   // Game systems
   const [productionSystem] = useState(() => new ProductionSystem());
   const [combatSystem] = useState(() => new CombatSystem());
@@ -166,7 +159,14 @@ export const GameScreen: React.FC = () => {
     addBuilders,
     addBoost,
     purchaseBuilderWithBlueprints,
+    hasCompletedOnboarding,
+    completeOnboarding,
   } = useGameStore();
+
+  // Handle onboarding completion
+  const handleOnboardingComplete = useCallback(() => {
+    completeOnboarding();
+  }, [completeOnboarding]);
 
   // Calculate prestige bonuses
   const prestigeBonuses = prestigeSystem.calculateBonuses(player.prestigeUpgrades);
@@ -751,7 +751,7 @@ export const GameScreen: React.FC = () => {
 
       {/* Onboarding tutorial for new players */}
       <OnboardingTutorial
-        visible={showOnboarding}
+        visible={!hasCompletedOnboarding}
         onComplete={handleOnboardingComplete}
       />
 

@@ -78,6 +78,7 @@ export interface GameState {
   combat: CombatState;
   currentWave: number;
   dailyRewards: DailyRewardState;
+  hasCompletedOnboarding: boolean;
 }
 
 export const createInitialGameState = (): GameState => ({
@@ -179,4 +180,5 @@ export const createInitialGameState = (): GameState => ({
     totalDaysLoggedIn: 0,
     hasClaimedToday: false,
   },
+  hasCompletedOnboarding: false,
 });

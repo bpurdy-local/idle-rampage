@@ -7,72 +7,109 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
+const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 export interface OnboardingStep {
   id: string;
   title: string;
   message: string;
-  /** Position hint for where the tooltip should appear */
-  position: 'top' | 'middle' | 'bottom';
-  /** Highlight area (percentage of screen or fixed pixels) */
+  /** Position for the tooltip */
+  tooltipPosition: 'top' | 'middle' | 'bottom';
+  /** Highlight area (pixels from top, left, width, height) */
   highlight?: {
-    x: number;
-    y: number;
+    top: number;
+    left: number;
     width: number;
     height: number;
+    borderRadius?: number;
   };
 }
 
+// Approximate positions for UI elements (these may need adjustment based on actual layout)
 const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to Idle Rampage!',
     message: 'Let\'s show you around. Tap "Next" to continue.',
-    position: 'middle',
+    tooltipPosition: 'middle',
+    // No highlight for welcome
+  },
+  {
+    id: 'resources',
+    title: 'Resources',
+    message: 'Scrap is used to upgrade buildings. Blueprints are earned from prestiging. Builders can be assigned to boost production.',
+    tooltipPosition: 'middle',
+    highlight: {
+      top: 64, // Below status bar
+      left: 0,
+      width: SCREEN_WIDTH,
+      height: 80,
+      borderRadius: 0,
+    },
   },
   {
     id: 'enemy',
     title: 'Tap to Attack!',
     message: 'Tap on enemies to deal damage. The faster you tap, the faster they fall!',
-    position: 'middle',
-  },
-  {
-    id: 'resources',
-    title: 'Resources',
-    message: 'Scrap is used to upgrade buildings. Blueprints are earned from prestiging. Builders can be assigned to buildings.',
-    position: 'top',
-  },
-  {
-    id: 'building',
-    title: 'Scrap Collector',
-    message: 'Your first building! It generates scrap over time. Assign builders with + to boost production, and upgrade it for even more!',
-    position: 'bottom',
+    tooltipPosition: 'bottom',
+    highlight: {
+      top: 154,
+      left: 16,
+      width: SCREEN_WIDTH - 32,
+      height: 340,
+      borderRadius: 12,
+    },
   },
   {
     id: 'tabs',
     title: 'Navigation Tabs',
     message: 'Buildings shows your facilities. Depot has special items. Prestige lets you reset for permanent bonuses!',
-    position: 'bottom',
+    tooltipPosition: 'top',
+    highlight: {
+      top: 525,
+      left: 0,
+      width: SCREEN_WIDTH,
+      height: 44,
+      borderRadius: 0,
+    },
+  },
+  {
+    id: 'building',
+    title: 'Scrap Collector',
+    message: 'Your first building! It generates scrap over time. Assign builders with + to boost production, and upgrade when you can afford it!',
+    tooltipPosition: 'top',
+    highlight: {
+      top: 577,
+      left: 8,
+      width: SCREEN_WIDTH - 16,
+      height: 140,
+      borderRadius: 12,
+    },
   },
   {
     id: 'settings',
     title: 'Settings',
     message: 'Tap the menu icon to access settings, save your game, or get help.',
-    position: 'top',
+    tooltipPosition: 'middle',
+    highlight: {
+      top: 62,
+      left: SCREEN_WIDTH - 46,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+    },
   },
   {
     id: 'complete',
     title: 'You\'re Ready!',
     message: 'New buildings unlock as you progress through waves. Good luck, Commander!',
-    position: 'middle',
+    tooltipPosition: 'middle',
+    // No highlight for completion
   },
 ];
 
 interface OnboardingTutorialProps {
-  /** Whether to show the onboarding (should be false if already completed) */
   visible: boolean;
-  /** Called when onboarding is complete */
   onComplete: () => void;
 }
 
@@ -95,7 +132,6 @@ export const OnboardingTutorial: React.FC<OnboardingTutorialProps> = ({
   }, [visible, opacity, scale]);
 
   const animateTransition = useCallback(() => {
-    // Quick fade out/in for step transition
     opacity.value = withTiming(0.5, {duration: 100});
     scale.value = withTiming(0.95, {duration: 100});
     setTimeout(() => {
@@ -126,21 +162,76 @@ export const OnboardingTutorial: React.FC<OnboardingTutorialProps> = ({
     transform: [{scale: scale.value}],
   }));
 
+  const backdropAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
   if (!visible) return null;
 
-  const positionStyle = {
-    top: currentStep.position === 'top' ? 120 : currentStep.position === 'middle' ? '35%' as const : undefined,
-    bottom: currentStep.position === 'bottom' ? 200 : undefined,
+  const highlight = currentStep.highlight;
+
+  // Calculate tooltip position based on highlight area
+  const getTooltipPosition = () => {
+    if (currentStep.tooltipPosition === 'top') {
+      return {top: 100};
+    } else if (currentStep.tooltipPosition === 'bottom') {
+      return {bottom: 180};
+    } else {
+      return {top: '35%' as unknown as number};
+    }
   };
 
   return (
     <View style={styles.overlay} pointerEvents="box-none">
-      {/* Semi-transparent backdrop */}
-      <View style={styles.backdrop} pointerEvents="none" />
+      {/* Backdrop with cutout for highlighted area */}
+      <Animated.View style={[styles.backdropContainer, backdropAnimatedStyle]} pointerEvents="none">
+        {highlight ? (
+          <>
+            {/* Top section */}
+            <View style={[styles.backdropSection, {
+              top: 0,
+              left: 0,
+              right: 0,
+              height: highlight.top,
+            }]} />
+            {/* Left section */}
+            <View style={[styles.backdropSection, {
+              top: highlight.top,
+              left: 0,
+              width: highlight.left,
+              height: highlight.height,
+            }]} />
+            {/* Right section */}
+            <View style={[styles.backdropSection, {
+              top: highlight.top,
+              right: 0,
+              width: SCREEN_WIDTH - highlight.left - highlight.width,
+              height: highlight.height,
+            }]} />
+            {/* Bottom section */}
+            <View style={[styles.backdropSection, {
+              top: highlight.top + highlight.height,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }]} />
+            {/* Highlight border */}
+            <View style={[styles.highlightBorder, {
+              top: highlight.top - 2,
+              left: highlight.left - 2,
+              width: highlight.width + 4,
+              height: highlight.height + 4,
+              borderRadius: (highlight.borderRadius ?? 0) + 2,
+            }]} />
+          </>
+        ) : (
+          <View style={styles.fullBackdrop} />
+        )}
+      </Animated.View>
 
       {/* Tooltip */}
       <Animated.View
-        style={[styles.container, positionStyle, animatedStyle]}
+        style={[styles.tooltipContainer, getTooltipPosition(), animatedStyle]}
         pointerEvents="box-none"
       >
         <View style={styles.tooltip}>
@@ -182,11 +273,27 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 2000,
   },
-  backdrop: {
+  backdropContainer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
-  container: {
+  backdropSection: {
+    position: 'absolute',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+  },
+  fullBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+  },
+  highlightBorder: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderColor: '#00CED1',
+    shadowColor: '#00CED1',
+    shadowOffset: {width: 0, height: 0},
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+  },
+  tooltipContainer: {
     position: 'absolute',
     left: 20,
     right: 20,

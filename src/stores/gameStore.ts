@@ -54,6 +54,8 @@ interface GameActions {
   updateDailyRewards: (dailyRewards: DailyRewardState) => void;
   resetDailyClaimFlag: () => void;
 
+  completeOnboarding: () => void;
+
   getState: () => GameState;
 }
 
@@ -491,8 +493,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  completeOnboarding: () => set({hasCompletedOnboarding: true}),
+
   getState: () => {
-    const {player, buildings, combat, currentWave, dailyRewards} = get();
-    return {player, buildings, combat, currentWave, dailyRewards};
+    const {player, buildings, combat, currentWave, dailyRewards, hasCompletedOnboarding} = get();
+    return {player, buildings, combat, currentWave, dailyRewards, hasCompletedOnboarding};
   },
 }));
