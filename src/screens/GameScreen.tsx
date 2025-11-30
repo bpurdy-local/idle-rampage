@@ -37,8 +37,7 @@ import {
   checkWeakPointHit,
   getWeakPointDamageMultiplier,
   WeakPoint,
-  TutorialManager,
-  TutorialState,
+  OnboardingTutorial,
 } from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
 import {getScaledRewardAmount} from '../data/dailyRewards';
@@ -91,10 +90,7 @@ export const GameScreen: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [weakPoints, setWeakPoints] = useState<WeakPoint[]>([]);
-  const [dismissedTips, setDismissedTips] = useState<Set<string>>(new Set());
-  const [totalTaps, setTotalTaps] = useState(0);
-  const [hasAssignedBuilder, setHasAssignedBuilder] = useState(false);
-  const [hasUpgradedBuilding, setHasUpgradedBuilding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
   const [enemyDisplayBounds, setEnemyDisplayBounds] = useState<{width: number; height: number; x: number; y: number}>({
     width: 350,
     height: 300,
@@ -138,9 +134,10 @@ export const GameScreen: React.FC = () => {
     setEnemyDisplayBounds({width, height, x, y});
   }, []);
 
-  // Handle dismissing tutorial tips
-  const handleDismissTip = useCallback((tipId: string) => {
-    setDismissedTips(prev => new Set([...prev, tipId]));
+  // Handle onboarding completion
+  const handleOnboardingComplete = useCallback(() => {
+    setShowOnboarding(false);
+    // TODO: Persist this to AsyncStorage so it doesn't show again
   }, []);
 
   // Game systems
@@ -376,9 +373,6 @@ export const GameScreen: React.FC = () => {
       }
       lastTapTimeRef.current = now;
 
-      // Track total taps for tutorial
-      setTotalTaps(prev => prev + 1);
-
       // Check for weak point hit
       let weakPointMultiplier = 1;
       let hitWeakPoint = false;
@@ -436,8 +430,11 @@ export const GameScreen: React.FC = () => {
         },
       );
 
-      // Apply weak point multiplier to final damage
-      const finalDamage = tapDamage * burst.multiplier * weakPointMultiplier;
+      // Apply weak point bonus as ADDITIVE damage (you deal normal damage + bonus)
+      // weakPointMultiplier is the bonus multiplier (e.g., 1.5x means +50% bonus damage)
+      const baseDamageWithBurst = tapDamage * burst.multiplier;
+      const weakPointBonusDamage = hitWeakPoint ? baseDamageWithBurst * (weakPointMultiplier - 1) : 0;
+      const finalDamage = baseDamageWithBurst + weakPointBonusDamage;
       state.damageEnemy(finalDamage);
 
       // Calculate scrap from tap damage
@@ -469,8 +466,6 @@ export const GameScreen: React.FC = () => {
   const handleAssignBuilder = useCallback(
     (buildingId: string) => {
       assignBuilder(buildingId);
-      // Track for tutorial
-      setHasAssignedBuilder(true);
     },
     [assignBuilder],
   );
@@ -510,8 +505,6 @@ export const GameScreen: React.FC = () => {
       if (player.scrap >= cost) {
         setScrap(player.scrap - cost);
         upgradeBuilding(buildingId);
-        // Track for tutorial
-        setHasUpgradedBuilding(true);
       }
     },
     [buildings, player.scrap, setScrap, upgradeBuilding, getDiscountedUpgradeCost],
@@ -549,21 +542,6 @@ export const GameScreen: React.FC = () => {
   // Get prestige upgrade status for UI
   const upgradeStatus = prestigeSystem.getUpgradeStatus(player.blueprints, player.prestigeUpgrades);
   const prestigePreview = prestigeSystem.previewPrestige(currentWave);
-
-  // Build tutorial state for contextual tips
-  const tutorialState: TutorialState = {
-    currentWave,
-    scrap: player.scrap,
-    blueprints: player.blueprints,
-    totalTaps,
-    buildingsUnlocked: buildings.filter(b => b.isUnlocked).map(b => b.typeId),
-    buildingLevels: buildings.reduce((acc, b) => ({...acc, [b.typeId]: b.level}), {} as Record<string, number>),
-    hasAssignedBuilder,
-    hasUpgradedBuilding,
-    hasPurchasedPrestige: Object.values(player.prestigeUpgrades).some(level => level > 0),
-    prestigeCount: player.prestigeCount,
-    highestWave: currentWave, // Use current wave as highest for now
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -771,14 +749,11 @@ export const GameScreen: React.FC = () => {
         onDismiss={() => setBuildingEvolution(null)}
       />
 
-      {/* Don't show tutorial tips while building unlock/evolution tooltip is visible */}
-      {buildingEvolution === null && (
-        <TutorialManager
-          tutorialState={tutorialState}
-          dismissedTips={dismissedTips}
-          onDismissTip={handleDismissTip}
-        />
-      )}
+      {/* Onboarding tutorial for new players */}
+      <OnboardingTutorial
+        visible={showOnboarding}
+        onComplete={handleOnboardingComplete}
+      />
 
       <SettingsModal
         visible={showSettings}

@@ -34,18 +34,19 @@ interface WeakPointOverlayProps {
 }
 
 // Base config per tier (size and duration only - count/damage scale with level+builders)
+// Damage multiplier is BONUS damage (2.0 = +100% bonus, so you deal 2x total)
 const TIER_CONFIG = {
-  1: {baseSize: 28, duration: 1500, baseDamageMultiplier: 1.5},
-  2: {baseSize: 32, duration: 1800, baseDamageMultiplier: 1.8},
-  3: {baseSize: 36, duration: 2000, baseDamageMultiplier: 2.0},
-  4: {baseSize: 40, duration: 2200, baseDamageMultiplier: 2.5},
-  5: {baseSize: 44, duration: 2500, baseDamageMultiplier: 3.0},
+  1: {baseSize: 28, duration: 1500, baseDamageMultiplier: 2.0},  // +100% bonus damage
+  2: {baseSize: 32, duration: 1800, baseDamageMultiplier: 2.5},  // +150% bonus damage
+  3: {baseSize: 36, duration: 2000, baseDamageMultiplier: 3.0},  // +200% bonus damage
+  4: {baseSize: 40, duration: 2200, baseDamageMultiplier: 4.0},  // +300% bonus damage
+  5: {baseSize: 44, duration: 2500, baseDamageMultiplier: 5.0},  // +400% bonus damage
 };
 
 // Max weak points caps at 4, even with high builders/levels
 const MAX_WEAK_POINTS = 4;
 // Damage multiplier caps to prevent it being too overpowered
-const MAX_DAMAGE_MULTIPLIER = 8.0;
+const MAX_DAMAGE_MULTIPLIER = 12.0;
 
 /**
  * Calculate max weak points based on level and builders.
