@@ -23,7 +23,7 @@ export interface BuildingEvolutionTier {
   tier: number;
   name: string;
   description: string;
-  /** Wave required to unlock this building (tier 1 only) */
+  /** Wave requirement for unlocking this tier (tier 1 only) */
   unlockWave: number;
   /** Level required to evolve to this tier (tier 2+) */
   unlockLevel?: number;
@@ -60,6 +60,7 @@ export interface BuildingType {
   baseCost: number;
   costMultiplier: number;
   maxBuilders: number;
+  /** Wave requirement for unlocking this building */
   unlockWave: number;
   iconName: string;
   color: string;

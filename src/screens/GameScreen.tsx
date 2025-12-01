@@ -63,7 +63,7 @@ import {PrestigeSystem} from '../systems/PrestigeSystem';
 import {SpecialEffectsSystem} from '../systems/SpecialEffectsSystem';
 import {DEBUG_CONFIG} from '../data/debugConfig';
 import {saveService} from '../services/SaveService';
-import {TAP_COOLDOWN_MS} from '../data/formulas';
+import {TAP_COOLDOWN_MS, calculateCriticalWeaknessChance, CRITICAL_WEAKNESS_BONUS_MULTIPLIER} from '../data/formulas';
 
 export const GameScreen: React.FC = () => {
   const [showPrestige, setShowPrestige] = useState(false);
@@ -426,6 +426,12 @@ export const GameScreen: React.FC = () => {
           const scannerLevel = scannerBuilding?.level ?? 1;
           const scannerBuilders = scannerBuilding?.assignedBuilders ?? 0;
           weakPointMultiplier = getWeakPointDamageMultiplier(scannerTier, scannerLevel, scannerBuilders);
+
+          // Critical weak points deal extra damage (gold weak points)
+          if (hitPoint.isCritical) {
+            weakPointMultiplier *= CRITICAL_WEAKNESS_BONUS_MULTIPLIER;
+          }
+
           hitWeakPoint = true;
         }
       }
@@ -635,6 +641,11 @@ export const GameScreen: React.FC = () => {
           const scannerLevel = scannerBuilding?.level ?? 1;
           const scannerBuilders = scannerBuilding?.assignedBuilders ?? 0;
 
+          // Calculate critical weakness chance from scanner stats
+          const criticalChance = isUnlocked
+            ? calculateCriticalWeaknessChance(scannerLevel, scannerBuilders, scannerTier)
+            : 0;
+
           return (
             <WeakPointOverlay
               isActive={isUnlocked && combat.isActive && combat.currentEnemy !== null}
@@ -643,6 +654,7 @@ export const GameScreen: React.FC = () => {
               assignedBuilders={scannerBuilders}
               onWeakPointsChange={handleWeakPointsChange}
               bounds={{width: enemyDisplayBounds.width, height: enemyDisplayBounds.height}}
+              criticalChance={criticalChance}
             />
           );
         })()}

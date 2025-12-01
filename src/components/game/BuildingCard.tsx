@@ -18,6 +18,7 @@ import {
   calculateBurstBoostChance,
   calculateCriticalWeaknessChance,
   calculateWaveExtendChance,
+  calculateWeakPointDamageMultiplier,
   SCRAP_FIND_BASE_REWARD_PERCENT,
   SCRAP_FIND_TIER_MULTIPLIERS,
   CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER,
@@ -97,7 +98,17 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
       case 'turret_station':
         return {label: 'Auto DPS', value: formatNumber(production)};
       case 'training_facility':
-        return {label: 'Tap Bonus', value: `+${formatNumber(production)}`};
+        // production is a decimal (e.g., 0.19), multiply by 100 for flat damage bonus
+        return {label: 'Tap Bonus', value: `+${formatNumber(production * 100)}`};
+      case 'weak_point_scanner': {
+        // Show weak point damage multiplier instead of meaningless production value
+        const wpMultiplier = calculateWeakPointDamageMultiplier(
+          evolutionTier,
+          building.level,
+          building.assignedBuilders,
+        );
+        return {label: 'WP Damage', value: `${wpMultiplier.toFixed(1)}x`};
+      }
       case 'command_center':
         // production is already the percentage (e.g., 0.15 for 15%)
         return {label: 'Boost', value: `+${Math.round(production * 100)}%`};

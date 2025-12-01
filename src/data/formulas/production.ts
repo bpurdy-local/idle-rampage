@@ -285,29 +285,18 @@ export function calculateBuildingProduction(
 /**
  * Calculate wave-based efficiency bonus for buildings.
  *
- * Components:
- * - Logarithmic bonus: log10(wave + 1) * 0.5 (smooth early game)
- * - Linear bonus: wave * 0.02 (consistent growth)
- * - Milestone bonuses at waves 25, 50, 75, 100
+ * NOTE: Wave bonus has been disabled to decouple building effects from wave progression.
+ * Buildings now scale purely based on level, workers, and prestige - not wave number.
+ * This allows for more predictable balance and prevents wave-based scaling issues.
  *
- * Examples:
- * - Wave 1: ~1.15x
- * - Wave 25: ~2.2x
- * - Wave 50: ~3.85x
- * - Wave 100: ~6.5x
+ * The waveBonus parameter is kept in the codebase for future use if needed,
+ * but this function always returns 1 (no bonus).
+ *
+ * @deprecated Wave bonus disabled - always returns 1
  */
-export function calculateWaveBonus(currentWave: number): number {
-  const logBonus = Math.log10(currentWave + 1) * WAVE_BONUS_LOG_MULTIPLIER;
-  const linearBonus = currentWave * WAVE_BONUS_LINEAR_PER_WAVE;
-
-  let milestoneBonus = 0;
-  for (const milestone of WAVE_MILESTONES) {
-    if (currentWave >= milestone.wave) {
-      milestoneBonus += milestone.bonus;
-    }
-  }
-
-  return 1 + logBonus + linearBonus + milestoneBonus;
+export function calculateWaveBonus(_currentWave: number): number {
+  // Wave bonus disabled - buildings scale via level/workers/prestige only
+  return 1;
 }
 
 // =============================================================================

@@ -185,6 +185,11 @@ export const CRITICAL_WEAKNESS_CHANCE_PER_WORKER = 0.012;
 export const CRITICAL_WEAKNESS_CHANCE_PER_TIER = 0.04;
 export const CRITICAL_WEAKNESS_MAX_CHANCE = 0.95;
 /**
+ * Critical weak points (gold) deal this multiplier on top of normal weak point damage.
+ * E.g., 2.0 means critical weak points deal 2x the damage of regular weak points.
+ */
+export const CRITICAL_WEAKNESS_BONUS_MULTIPLIER = 2.0;
+/**
  * @deprecated Use calculateWeakPointDamageMultiplier from combat.ts instead.
  * This constant is kept for backward compatibility but the actual multiplier
  * is now dynamically calculated based on tier, level, and workers.
