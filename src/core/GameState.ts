@@ -30,8 +30,9 @@ export interface CombatState {
   burstChance: number;
   burstMultiplier: number;
   /**
-   * Base tap damage before wave scaling and training facility bonus.
-   * Effective tap damage = baseTapDamage + (highestWave * 2) + trainingFacilityBonus
+   * Base tap damage before multipliers.
+   * Training Facility now provides % bonus, not flat damage.
+   * Effective tap damage = baseTapDamage * trainingFacilityBonus * prestigeMultiplier * boostMultiplier
    */
   baseTapDamage: number;
 }
@@ -89,7 +90,7 @@ export interface GameState {
 
 export const createInitialGameState = (): GameState => ({
   player: {
-    scrap: 0,
+    scrap: 100, // Starting scrap for first building upgrade
     blueprints: 0,
     totalBlueprintsEarned: 0,
     prestigeCount: 0,
@@ -99,9 +100,9 @@ export const createInitialGameState = (): GameState => ({
     totalEnemiesDefeated: 0,
     totalScrapEarned: 0,
     builders: {
-      total: 10,
-      available: 10,
-      maxBuilders: 150,
+      total: 5, // Start with 5 builders
+      available: 5,
+      maxBuilders: 250, // Increased max builders cap
     },
     prestigeUpgrades: {},
     activeBoosts: [],
@@ -173,11 +174,11 @@ export const createInitialGameState = (): GameState => ({
     isActive: false,
     currentEnemy: null,
     waveTimer: 0,
-    waveTimerMax: 30,
+    waveTimerMax: 30, // Matches BASE_WAVE_TIMER_SECONDS in progression.ts
     autoDamagePerTick: 1,
-    burstChance: 0.05,
-    burstMultiplier: 5,
-    baseTapDamage: 5,
+    burstChance: 0, // DEFAULT_BURST_CHANCE - burst only from Training Facility
+    burstMultiplier: 6, // DEFAULT_BURST_MULTIPLIER from combat.ts
+    baseTapDamage: 5, // BASE_TAP_DAMAGE from combat.ts
   },
   currentWave: 1,
   dailyRewards: {

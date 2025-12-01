@@ -153,6 +153,7 @@ export const GameScreen: React.FC = () => {
     recallAllBuilders,
     focusBuilding,
     upgradeBuilding,
+    evolveBuilding,
     resetForPrestige,
     setBlueprints,
     setPrestigeUpgrade,
@@ -290,6 +291,7 @@ export const GameScreen: React.FC = () => {
           boostMultiplier: 1,
           commandCenterBonus: productionSystem.calculateCommandCenterBonus(buildings),
           tierMultiplier: offlineTierMultiplier,
+          totalWorkersOwned: player.builders.total,
         };
 
         const productionRate = productionSystem.getTotalProductionPerSecond(
@@ -430,9 +432,10 @@ export const GameScreen: React.FC = () => {
 
       // Calculate prestige bonuses with fresh state
       const currentPrestigeBonuses = prestigeSystem.calculateBonuses(currentPlayer.prestigeUpgrades);
+      const totalWorkersOwned = currentPlayer.builders.total;
 
       // Calculate base tap damage with Training Ground bonus
-      const trainingBonus = combatSystem.calculateTapDamageBonus(currentBuildings);
+      const trainingBonus = combatSystem.calculateTapDamageBonus(currentBuildings, totalWorkersOwned);
       const baseTapDamage = 10 + trainingBonus;
       const tapTierMultiplier = PRESTIGE_TIERS[currentPlayer.buildingTier]?.multiplier ?? 1;
 
@@ -444,6 +447,7 @@ export const GameScreen: React.FC = () => {
         prestigeBurstDamage: currentPrestigeBonuses.burstDamageMultiplier,
         boostMultiplier: 1,
         tierMultiplier: tapTierMultiplier,
+        totalWorkersOwned,
       });
 
       const burst = combatSystem.checkBurstAttack(
@@ -456,6 +460,7 @@ export const GameScreen: React.FC = () => {
           prestigeBurstDamage: currentPrestigeBonuses.burstDamageMultiplier,
           boostMultiplier: 1,
           tierMultiplier: tapTierMultiplier,
+          totalWorkersOwned,
         },
       );
 
@@ -562,6 +567,14 @@ export const GameScreen: React.FC = () => {
       }
     },
     [buildings, player.scrap, setScrap, upgradeBuilding, getDiscountedUpgradeCost],
+  );
+
+  // Handle building evolution
+  const handleEvolve = useCallback(
+    (buildingId: string) => {
+      evolveBuilding(buildingId);
+    },
+    [evolveBuilding],
   );
 
   // Handle prestige
@@ -706,7 +719,12 @@ export const GameScreen: React.FC = () => {
             if (!tier) return null;
 
             const buildingType = toBuildingType(evolvableBuilding, tier);
-            const nextTier = getNextEvolutionTier(evolvableBuilding, currentWave);
+            const nextTier = getNextEvolutionTier(evolvableBuilding, building.level);
+
+            // Check if evolution is available (building level meets next tier requirement)
+            const canEvolve = nextTier !== null &&
+              nextTier.unlockLevel !== undefined &&
+              building.level >= nextTier.unlockLevel;
 
             const waveBonus = productionSystem.calculateWaveBonus(currentWave);
             // Use the appropriate prestige multiplier based on building role
@@ -746,11 +764,14 @@ export const GameScreen: React.FC = () => {
                 onUnassignMultiple={(count) => handleUnassignMultiple(building.id, count)}
                 onFocus={() => handleFocusBuilding(building.id)}
                 onUpgrade={() => handleUpgrade(building.id)}
+                onEvolve={() => handleEvolve(building.id)}
                 onShowInfo={() => setSelectedBuildingInfo(buildingType)}
                 prestigeCount={player.prestigeCount}
                 currentWave={currentWave}
                 evolutionTier={building.evolutionTier}
-                nextEvolutionWave={nextTier?.unlockWave}
+                nextEvolutionLevel={nextTier?.unlockLevel}
+                currentBuildingLevel={building.level}
+                canEvolve={canEvolve}
                 noWorkers={evolvableBuilding.noWorkers}
               />
             );

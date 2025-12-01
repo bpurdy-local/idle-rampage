@@ -35,12 +35,18 @@ interface BuildingCardProps {
   onUnassignMultiple: (count: number) => void;
   onFocus: () => void;
   onUpgrade: () => void;
+  onEvolve: () => void;
   onShowInfo: () => void;
   availableBuilders: number;
   prestigeCount: number;
   currentWave: number;
   evolutionTier: number;
-  nextEvolutionWave?: number;
+  /** Level required to evolve to the next tier */
+  nextEvolutionLevel?: number;
+  /** Current building level for evolution progress display */
+  currentBuildingLevel?: number;
+  /** True if evolution is available (level requirement met) */
+  canEvolve?: boolean;
   /** If true, this building doesn't use workers (static effect building) */
   noWorkers?: boolean;
   /** The building's unique typeId for role-specific display */
@@ -63,16 +69,20 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   onUnassignMultiple,
   onFocus,
   onUpgrade,
+  onEvolve,
   onShowInfo,
   availableBuilders,
   prestigeCount,
-  currentWave,
+  currentWave: _currentWave, // Reserved for future use
   evolutionTier,
-  nextEvolutionWave,
+  nextEvolutionLevel,
+  currentBuildingLevel = 1,
+  canEvolve = false,
   noWorkers = false,
   buildingTypeId,
   specialEffectType,
 }) => {
+  void _currentWave; // Suppress unused warning
   const canAssign = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   const canUnassign = !noWorkers && building.assignedBuilders > 0;
   const canAssign5 = !noWorkers && availableBuilders >= 5 && building.assignedBuilders + 5 <= buildingType.maxBuilders;
@@ -154,9 +164,9 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   const tierColor = getTierColor(prestigeCount);
   const hasTier = prestigeCount > 0;
 
-  // Evolution progress info
-  const hasNextEvolution = nextEvolutionWave !== undefined;
-  const wavesUntilEvolution = hasNextEvolution ? nextEvolutionWave - currentWave : 0;
+  // Evolution progress info (now level-based)
+  const hasNextEvolution = nextEvolutionLevel !== undefined;
+  const levelsUntilEvolution = hasNextEvolution ? nextEvolutionLevel - currentBuildingLevel : 0;
 
   // Refs to track latest enabled states for hold-to-repeat
   const canAssignRef = useRef(canAssign);
@@ -311,9 +321,14 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
           <Text style={styles.level}>Lv.{building.level}</Text>
         </View>
         <Text style={styles.description}>{buildingType.description}</Text>
-        {hasNextEvolution && wavesUntilEvolution > 0 && (
+        {hasNextEvolution && !canEvolve && levelsUntilEvolution > 0 && (
           <Text style={styles.evolutionHint}>
-            Evolves in {wavesUntilEvolution} wave{wavesUntilEvolution !== 1 ? 's' : ''}
+            Evolves at Lv.{nextEvolutionLevel} ({levelsUntilEvolution} more)
+          </Text>
+        )}
+        {canEvolve && (
+          <Text style={styles.evolutionReady}>
+            Ready to evolve!
           </Text>
         )}
       </View>
@@ -387,13 +402,21 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
           </View>
         )}
 
-        <AnimatedPressable
-          style={[styles.upgradeBtn, !canAffordUpgrade && styles.btnDisabled, noWorkers && styles.upgradeBtnWide, upgradeBtnStyle]}
-          {...createHoldablePressHandler(upgradeBtnScale, onUpgrade, () => canAffordUpgradeRef.current)}>
-          <Text style={styles.upgradeBtnText}>
-            Upgrade ({formatNumber(upgradeCost)})
-          </Text>
-        </AnimatedPressable>
+        {canEvolve ? (
+          <TouchableOpacity
+            style={styles.evolveBtn}
+            onPress={onEvolve}>
+            <Text style={styles.evolveBtnText}>Evolve!</Text>
+          </TouchableOpacity>
+        ) : (
+          <AnimatedPressable
+            style={[styles.upgradeBtn, !canAffordUpgrade && styles.btnDisabled, noWorkers && styles.upgradeBtnWide, upgradeBtnStyle]}
+            {...createHoldablePressHandler(upgradeBtnScale, onUpgrade, () => canAffordUpgradeRef.current)}>
+            <Text style={styles.upgradeBtnText}>
+              Upgrade ({formatNumber(upgradeCost)})
+            </Text>
+          </AnimatedPressable>
+        )}
       </View>
     </Animated.View>
   );
@@ -457,6 +480,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  evolutionReady: {
+    color: '#00ff00',
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '700',
   },
   level: {
     color: '#ff9800',
@@ -575,5 +604,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+  evolveBtn: {
+    backgroundColor: '#9C27B0',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#E1BEE7',
+  },
+  evolveBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

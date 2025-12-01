@@ -75,6 +75,7 @@ export function useGameTick({
         boostMultiplier,
         commandCenterBonus: productionSystem.calculateCommandCenterBonus(buildings),
         tierMultiplier,
+        totalWorkersOwned: player.builders.total,
       };
 
       const productionResult = productionSystem.tick(buildings, productionBonuses, deltaMs);
@@ -131,6 +132,7 @@ export function useGameTick({
           currentWave,
           tierMultiplier,
           boostMultiplier,
+          player.builders.total,
           prestigeBonuses,
           combatSystem,
           waveManager,
@@ -179,6 +181,7 @@ function handleCombatTick(
   currentWave: number,
   tierMultiplier: number,
   boostMultiplier: number,
+  totalWorkersOwned: number,
   prestigeBonuses: ReturnType<PrestigeSystem['calculateBonuses']>,
   combatSystem: CombatSystem,
   waveManager: WaveManager,
@@ -217,6 +220,7 @@ function handleCombatTick(
       prestigeBurstDamage: prestigeBonuses.burstDamageMultiplier,
       boostMultiplier,
       tierMultiplier,
+      totalWorkersOwned,
     },
     deltaMs,
     prestigeBonuses.waveRewardsMultiplier * debugScrapMultiplier * boostMultiplier,

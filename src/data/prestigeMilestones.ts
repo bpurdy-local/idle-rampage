@@ -11,15 +11,15 @@ export interface PrestigeTier {
 
 export const PRESTIGE_TIERS: PrestigeTier[] = [
   {tier: 0, name: 'Base', prestigeRequired: 0, multiplier: 1.0, color: '#9E9E9E'},
-  {tier: 1, name: 'Mk II', prestigeRequired: 1, multiplier: 1.2, color: '#4CAF50'},
-  {tier: 2, name: 'Mk III', prestigeRequired: 3, multiplier: 1.5, color: '#2196F3'},
-  {tier: 3, name: 'Advanced', prestigeRequired: 5, multiplier: 2.0, color: '#9C27B0'},
-  {tier: 4, name: 'Enhanced', prestigeRequired: 10, multiplier: 2.5, color: '#FF9800'},
-  {tier: 5, name: 'Superior', prestigeRequired: 20, multiplier: 3.5, color: '#F44336'},
-  {tier: 6, name: 'Elite', prestigeRequired: 35, multiplier: 5.0, color: '#E91E63'},
-  {tier: 7, name: 'Legendary', prestigeRequired: 50, multiplier: 7.5, color: '#FFD700'},
-  {tier: 8, name: 'Transcendent', prestigeRequired: 75, multiplier: 10.0, color: '#00FFFF'},
-  {tier: 9, name: 'Ultimate', prestigeRequired: 100, multiplier: 15.0, color: '#FF00FF'},
+  {tier: 1, name: 'Mk II', prestigeRequired: 1, multiplier: 1.3, color: '#4CAF50'},
+  {tier: 2, name: 'Mk III', prestigeRequired: 3, multiplier: 1.7, color: '#2196F3'},
+  {tier: 3, name: 'Advanced', prestigeRequired: 5, multiplier: 2.2, color: '#9C27B0'},
+  {tier: 4, name: 'Enhanced', prestigeRequired: 8, multiplier: 3.0, color: '#FF9800'},
+  {tier: 5, name: 'Superior', prestigeRequired: 12, multiplier: 4.0, color: '#F44336'},
+  {tier: 6, name: 'Elite', prestigeRequired: 18, multiplier: 5.5, color: '#E91E63'},
+  {tier: 7, name: 'Legendary', prestigeRequired: 25, multiplier: 7.5, color: '#FFD700'},
+  {tier: 8, name: 'Transcendent', prestigeRequired: 40, multiplier: 10.0, color: '#00FFFF'},
+  {tier: 9, name: 'Ultimate', prestigeRequired: 60, multiplier: 15.0, color: '#FF00FF'},
 ];
 
 /**

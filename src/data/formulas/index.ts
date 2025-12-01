@@ -14,21 +14,29 @@
 // Production formulas
 export {
   // Constants
-  LEVEL_MULTIPLIER_PER_LEVEL,
+  LEVEL_MULTIPLIER_BASE,
+  LEVEL_SOFT_CAP,
   OFFLINE_EFFICIENCY,
   MAX_OFFLINE_HOURS,
   COMMAND_CENTER_BONUS_PER_LEVEL,
-  WORKER_EFFICIENCY_DECAY,
+  COMMAND_CENTER_BONUS_PER_WORKER,
+  COMMAND_CENTER_MAX_BOOST,
+  WORKER_EFFICIENCY_BASE_DECAY,
+  WORKER_EFFICIENCY_MIN_DECAY,
+  WORKER_EFFICIENCY_SCALING_CAP,
   WORKER_MILESTONES,
+  LEVEL_MILESTONES,
   WAVE_BONUS_LOG_MULTIPLIER,
   WAVE_BONUS_LINEAR_PER_WAVE,
   WAVE_MILESTONES,
   // Worker efficiency
+  calculateDecayRate,
   calculateSingleWorkerEfficiency,
   calculateTotalWorkerEfficiency,
   calculateWorkerMilestoneBonus,
   calculateWorkerEfficiency,
   // Building production
+  calculateLevelMilestoneBonus,
   calculateLevelMultiplier,
   calculateBuildingProduction,
   // Wave bonus
@@ -56,6 +64,7 @@ export {
   WEAK_POINT_MULTIPLIER_PER_LEVEL,
   WEAK_POINT_MULTIPLIER_PER_WORKER,
   WEAK_POINT_MAX_MULTIPLIER,
+  CRITICAL_BURST_STACK_BONUS,
   // Tap damage
   calculateTapVariance,
   calculateTapDamage,
@@ -63,6 +72,8 @@ export {
   checkBurstAttack,
   // Weak points
   calculateWeakPointDamageMultiplier,
+  // Critical + Burst stacking
+  calculateCombinedCriticalBurstMultiplier,
   // Scrap from damage
   calculateScrapFromDamage,
 } from './combat';
@@ -109,6 +120,9 @@ export {
   BUILDER_COST_TIER_2,
   BUILDER_COST_TIER_3,
   BUILDER_COST_TIER_4,
+  BUILDER_COST_TIER_5,
+  BUILDER_COST_TIER_6,
+  BUILDER_COST_TIER_7,
   STARTING_SCRAP_PER_WAVE_PER_LEVEL,
   PRESTIGE_RANKS,
   // Blueprint earning
@@ -130,8 +144,10 @@ export {
 export {
   // Constants
   ENGINEERING_BONUS_PER_LEVEL,
+  ENGINEERING_BONUS_PER_WORKER,
   ENGINEERING_MAX_DISCOUNT,
   SHIELD_BONUS_PER_LEVEL,
+  SHIELD_BONUS_PER_WORKER,
   SHIELD_MAX_BONUS_SECONDS,
   // Special effect constants
   SCRAP_FIND_BASE_COOLDOWN_MS,
@@ -149,10 +165,13 @@ export {
   CRITICAL_WEAKNESS_CHANCE_PER_LEVEL,
   CRITICAL_WEAKNESS_CHANCE_PER_WORKER,
   CRITICAL_WEAKNESS_CHANCE_PER_TIER,
+  CRITICAL_WEAKNESS_MAX_CHANCE,
   CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER,
   WAVE_EXTEND_BASE_CHANCE,
   WAVE_EXTEND_CHANCE_PER_LEVEL,
+  WAVE_EXTEND_CHANCE_PER_WORKER,
   WAVE_EXTEND_CHANCE_PER_TIER,
+  WAVE_EXTEND_MAX_CHANCE,
   WAVE_EXTEND_BONUS_TIME_PERCENT,
   WAVE_EXTEND_MAX_BONUS_SECONDS,
   // Building upgrade cost

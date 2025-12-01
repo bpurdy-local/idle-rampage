@@ -52,6 +52,7 @@ const defaultBonuses: CombatBonuses = {
   prestigeBurstDamage: 1,
   boostMultiplier: 1,
   tierMultiplier: 1,
+  totalWorkersOwned: 50, // High value for minimal decay in tests
 };
 
 describe('CombatSystem', () => {

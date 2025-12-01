@@ -14,19 +14,19 @@
 // =============================================================================
 
 /** Base tap damage before any modifiers */
-export const BASE_TAP_DAMAGE = 10;
+export const BASE_TAP_DAMAGE = 5;
 
-/** Minimum tap variance (90% of base) */
-export const TAP_VARIANCE_MIN = 0.9;
+/** Minimum tap variance (80% of base) */
+export const TAP_VARIANCE_MIN = 0.8;
 
-/** Maximum tap variance (110% of base) */
-export const TAP_VARIANCE_MAX = 1.1;
+/** Maximum tap variance (120% of base) */
+export const TAP_VARIANCE_MAX = 1.2;
 
-/** Default burst attack chance (5%) */
-export const DEFAULT_BURST_CHANCE = 0.05;
+/** Default burst attack chance (0% - burst only available from Training Facility) */
+export const DEFAULT_BURST_CHANCE = 0;
 
-/** Default burst attack damage multiplier (5x) */
-export const DEFAULT_BURST_MULTIPLIER = 5;
+/** Default burst attack damage multiplier (6x) */
+export const DEFAULT_BURST_MULTIPLIER = 6;
 
 /**
  * Percentage of enemy reward available from dealing damage.
@@ -41,12 +41,20 @@ export const DAMAGE_SCRAP_PERCENT = 0.5;
 /** Tap cooldown in milliseconds (prevents auto-clicker abuse) */
 export const TAP_COOLDOWN_MS = 150;
 
-// Weak point configuration
-export const WEAK_POINT_BASE_MULTIPLIER = 1.5;
+// Weak point configuration - workers are primary scaling factor
+export const WEAK_POINT_BASE_MULTIPLIER = 2.0;
 export const WEAK_POINT_MULTIPLIER_PER_TIER = 0.5;
 export const WEAK_POINT_MULTIPLIER_PER_LEVEL = 0.02;
-export const WEAK_POINT_MULTIPLIER_PER_WORKER = 0.01;
-export const WEAK_POINT_MAX_MULTIPLIER = 5.0;
+export const WEAK_POINT_MULTIPLIER_PER_WORKER = 0.04;
+export const WEAK_POINT_MAX_MULTIPLIER = 6.0;
+
+/**
+ * DAMAGE STACKING RULE:
+ * Critical (Weak Point) and Burst do NOT stack multiplicatively.
+ * When both trigger, use: max(criticalMultiplier, burstMultiplier) + 0.5 * min(...)
+ * This prevents exponential damage explosion.
+ */
+export const CRITICAL_BURST_STACK_BONUS = 0.5;
 
 // =============================================================================
 // TAP DAMAGE FORMULAS
@@ -111,11 +119,12 @@ export function checkBurstAttack(
  * Calculate weak point damage multiplier based on scanner stats.
  *
  * Formula: base + (tier - 1) * tierBonus + (level - 1) * levelBonus + workers * workerBonus
+ * Workers are the PRIMARY scaling factor (0.04 per worker vs 0.02 per level)
  *
  * Examples:
- * - Tier 1, Level 1, 0 workers: 1.5x
- * - Tier 3, Level 10, 5 workers: 2.73x
- * - Tier 5, Level 20, 20 workers: 3.88x (capped at 5x)
+ * - Tier 1, Level 1, 0 workers: 2.0x
+ * - Tier 3, Level 10, 5 workers: 3.38x
+ * - Tier 5, Level 25, 50 workers: 6.0x (capped)
  */
 export function calculateWeakPointDamageMultiplier(
   scannerTier: number,
@@ -128,6 +137,25 @@ export function calculateWeakPointDamageMultiplier(
 
   const multiplier = WEAK_POINT_BASE_MULTIPLIER + tierBonus + levelBonus + workerBonus;
   return Math.min(WEAK_POINT_MAX_MULTIPLIER, multiplier);
+}
+
+/**
+ * Calculate combined damage multiplier when both critical and burst trigger.
+ *
+ * Instead of multiplying (which causes exponential damage explosion),
+ * we use: max(critical, burst) + 0.5 * min(critical, burst)
+ *
+ * Examples:
+ * - Critical 2x, Burst 6x: 6 + 0.5*2 = 7x (not 12x)
+ * - Critical 4x, Burst 6x: 6 + 0.5*4 = 8x (not 24x)
+ */
+export function calculateCombinedCriticalBurstMultiplier(
+  criticalMultiplier: number,
+  burstMultiplier: number,
+): number {
+  const maxMultiplier = Math.max(criticalMultiplier, burstMultiplier);
+  const minMultiplier = Math.min(criticalMultiplier, burstMultiplier);
+  return maxMultiplier + CRITICAL_BURST_STACK_BONUS * minMultiplier;
 }
 
 // =============================================================================

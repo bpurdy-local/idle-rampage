@@ -12,22 +12,23 @@
 // CONFIGURATION CONSTANTS
 // =============================================================================
 
-// Wave timer configuration
-export const BASE_WAVE_TIMER_SECONDS = 20;
-export const WAVE_TIMER_BONUS_PER_WAVE = 0.2;
-export const MAX_WAVE_TIMER_SECONDS = 60;
+// Wave timer configuration - snappy timers, pacing from enemy HP
+// Shorter timers keep engagement high, upgrades matter for beating the clock
+export const BASE_WAVE_TIMER_SECONDS = 30;
+export const WAVE_TIMER_BONUS_PER_WAVE = 0.75;
+export const MAX_WAVE_TIMER_SECONDS = 75;
 
-// Boss configuration
+// Boss configuration - adjusted to match enemies.ts BOSS_CONFIG
 export const BOSS_WAVE_INTERVAL = 10;
-export const BOSS_HEALTH_MULTIPLIER = 3.0;
-export const BOSS_REWARD_MULTIPLIER = 5.0;
-export const BOSS_TIMER_MULTIPLIER = 1.5;
+export const BOSS_HEALTH_MULTIPLIER = 2.0;
+export const BOSS_REWARD_MULTIPLIER = 4.0;
+export const BOSS_TIMER_MULTIPLIER = 1.8;
 
-// Wave reward configuration
-export const WAVE_REWARD_BASE_PER_WAVE = 50;
-export const WAVE_REWARD_POLYNOMIAL_EXPONENT = 1.5;
-export const WAVE_REWARD_MULTIPLIER_PER_20_WAVES = 0.25;
-export const WAVE_REWARD_MULTIPLIER_CAP = 5;
+// Wave reward configuration - balanced for ~2hr first prestige
+export const WAVE_REWARD_BASE_PER_WAVE = 25;
+export const WAVE_REWARD_POLYNOMIAL_EXPONENT = 1.3;
+export const WAVE_REWARD_MULTIPLIER_PER_20_WAVES = 0.15;
+export const WAVE_REWARD_MULTIPLIER_CAP = 3;
 
 // =============================================================================
 // ENEMY SCALING FORMULAS
@@ -95,10 +96,10 @@ export function calculateBossReward(baseEnemyReward: number): number {
  * Formula: min(baseTimer + wave * bonusPerWave, maxTimer)
  *
  * Examples:
- * - Wave 1: 20.2s
- * - Wave 50: 30s
- * - Wave 100: 40s
- * - Wave 200+: 60s (capped)
+ * - Wave 1: 30.75s
+ * - Wave 20: 45s
+ * - Wave 40: 60s
+ * - Wave 60+: 75s (capped)
  */
 export function calculateWaveTimer(wave: number): number {
   const baseTimer = BASE_WAVE_TIMER_SECONDS + wave * WAVE_TIMER_BONUS_PER_WAVE;
@@ -138,14 +139,14 @@ export function getWavesUntilBoss(currentWave: number): number {
  * Calculate wave completion bonus scrap.
  *
  * Components:
- * - Base bonus: wave * 50
- * - Polynomial scaling: wave^1.5
- * - Wave multiplier: +25% per 20 waves (capped at 5x)
+ * - Base bonus: wave * 25
+ * - Polynomial scaling: wave^1.3
+ * - Wave multiplier: +15% per 20 waves (capped at 3x)
  *
  * Examples:
- * - Wave 10: ~816 bonus scrap
- * - Wave 50: ~7,954 bonus scrap
- * - Wave 100: ~50,000 bonus scrap
+ * - Wave 10: ~350 bonus scrap
+ * - Wave 40: ~1,600 bonus scrap
+ * - Wave 100: ~9,000 bonus scrap
  */
 export function calculateWaveCompletionBonus(wave: number): number {
   const baseBonus = wave * WAVE_REWARD_BASE_PER_WAVE;
@@ -184,11 +185,12 @@ export function calculateWaveReward(
 
 /**
  * Get wave difficulty label.
+ * Adjusted to match new enemy tier wave ranges.
  */
 export function getWaveDifficulty(wave: number): string {
-  if (wave <= 10) return 'Easy';
-  if (wave <= 25) return 'Normal';
-  if (wave <= 50) return 'Hard';
-  if (wave <= 100) return 'Expert';
+  if (wave <= 12) return 'Easy';
+  if (wave <= 30) return 'Normal';
+  if (wave <= 55) return 'Hard';
+  if (wave <= 80) return 'Expert';
   return 'Insane';
 }

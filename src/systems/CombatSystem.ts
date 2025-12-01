@@ -14,6 +14,10 @@ import {
   DEFAULT_BURST_MULTIPLIER,
 } from '../data/formulas';
 
+// Note: calculateCombinedCriticalBurstMultiplier is available from '../data/formulas'
+// for use when handling both critical and burst triggers simultaneously.
+// See BALANCE.md for the damage stacking rules.
+
 export interface CombatBonuses {
   prestigeAutoDamage: number;
   prestigeTapPower: number;
@@ -21,6 +25,7 @@ export interface CombatBonuses {
   prestigeBurstDamage: number;
   boostMultiplier: number;
   tierMultiplier: number;
+  totalWorkersOwned: number;
 }
 
 export interface DamageResult {
@@ -71,6 +76,7 @@ export class CombatSystem {
         buildingType,
         building.level,
         building.assignedBuilders,
+        bonuses.totalWorkersOwned,
       );
       totalDamage += baseDamage;
     }
@@ -78,7 +84,17 @@ export class CombatSystem {
     return totalDamage * bonuses.prestigeAutoDamage * bonuses.boostMultiplier * bonuses.tierMultiplier;
   }
 
-  calculateTapDamageBonus(buildings: BuildingState[]): number {
+  /**
+   * Calculate Training Facility tap damage multiplier.
+   *
+   * Training Facility now provides a % bonus (multiplier), not flat damage.
+   * baseProduction in buildings.ts defines the base % bonus per tier.
+   *
+   * @param buildings - Array of building states
+   * @param totalWorkersOwned - Total workers the player owns (for decay calculation)
+   * @returns A multiplier (e.g., 1.25 for +25% damage bonus)
+   */
+  calculateTapDamageMultiplier(buildings: BuildingState[], totalWorkersOwned: number): number {
     let totalBonus = 0;
 
     // Only training_facility provides tap damage bonus
@@ -96,15 +112,27 @@ export class CombatSystem {
       const buildingType = toBuildingType(evolvableBuilding, tier);
 
       // Buildings provide passive baseline (1 worker equivalent) plus assigned workers
+      // baseProduction is now the % bonus (e.g., 0.03 = 3%)
       const bonus = calculateProduction(
         buildingType,
         building.level,
         building.assignedBuilders,
+        totalWorkersOwned,
       );
       totalBonus += bonus;
     }
 
-    return totalBonus;
+    // Return as multiplier (1 + bonus)
+    return 1 + totalBonus;
+  }
+
+  /**
+   * @deprecated Use calculateTapDamageMultiplier instead.
+   * Kept for backward compatibility.
+   */
+  calculateTapDamageBonus(buildings: BuildingState[], totalWorkersOwned: number): number {
+    // Convert multiplier to flat bonus for backward compatibility
+    return (this.calculateTapDamageMultiplier(buildings, totalWorkersOwned) - 1) * 100;
   }
 
   calculateTapDamage(
@@ -298,6 +326,7 @@ export class CombatSystem {
       prestigeBurstDamage,
       boostMultiplier: 1,
       tierMultiplier: 1,
+      totalWorkersOwned: 5, // Default, should be overridden by caller
     };
   }
 
@@ -305,12 +334,12 @@ export class CombatSystem {
     return {
       isActive: false,
       currentEnemy: null,
-      waveTimer: 30,
+      waveTimer: 30, // Matches BASE_WAVE_TIMER_SECONDS
       waveTimerMax: 30,
       autoDamagePerTick: 1,
-      burstChance: DEFAULT_BURST_CHANCE,
-      burstMultiplier: DEFAULT_BURST_MULTIPLIER,
-      baseTapDamage: BASE_TAP_DAMAGE,
+      burstChance: DEFAULT_BURST_CHANCE, // 0.05
+      burstMultiplier: DEFAULT_BURST_MULTIPLIER, // 6
+      baseTapDamage: BASE_TAP_DAMAGE, // 8
     };
   }
 }

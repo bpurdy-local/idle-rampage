@@ -22,6 +22,11 @@ const mockBuildingType: BuildingType = {
   color: '#000000',
 };
 
+// Use high total workers for minimal decay in basic tests
+const HIGH_TOTAL_WORKERS = 50;
+// Use low total workers to test decay behavior
+const LOW_TOTAL_WORKERS = 5;
+
 describe('Building Model', () => {
   describe('createBuilding', () => {
     it('creates a building with correct default values', () => {
@@ -61,41 +66,43 @@ describe('Building Model', () => {
   describe('calculateProduction', () => {
     it('returns passive baseline with no assigned builders (1 effective worker)', () => {
       // With passive baseline, 0 assigned = 1 effective worker
-      const production = calculateProduction(mockBuildingType, 1, 0);
+      const production = calculateProduction(mockBuildingType, 1, 0, HIGH_TOTAL_WORKERS);
       expect(production).toBe(10); // baseProduction * 1 effective worker
     });
 
     it('returns 0 with no builders when passive is disabled', () => {
-      const production = calculateProduction(mockBuildingType, 1, 0, 1, 1, false);
+      const production = calculateProduction(mockBuildingType, 1, 0, HIGH_TOTAL_WORKERS, 1, 1, false);
       expect(production).toBe(0);
     });
 
     it('returns increased production with 1 assigned builder (passive + 1)', () => {
       // With passive baseline: 1 passive + 1 assigned worker at 100% efficiency
-      const production = calculateProduction(mockBuildingType, 1, 1);
+      const production = calculateProduction(mockBuildingType, 1, 1, HIGH_TOTAL_WORKERS);
       // 1 passive + 1 worker at 100% = 2 effective workers
       expect(production).toBe(20); // baseProduction * 2 effective workers
     });
 
     it('has diminishing returns with more workers', () => {
       // Workers have diminishing returns - each additional worker is less efficient
-      const prod0 = calculateProduction(mockBuildingType, 1, 0); // 1 effective (passive only)
-      const prod1 = calculateProduction(mockBuildingType, 1, 1); // passive + 1 worker at 100%
-      const prod5 = calculateProduction(mockBuildingType, 1, 5); // passive + 5 workers with diminishing returns
+      const prod0 = calculateProduction(mockBuildingType, 1, 0, HIGH_TOTAL_WORKERS); // 1 effective (passive only)
+      const prod1 = calculateProduction(mockBuildingType, 1, 1, HIGH_TOTAL_WORKERS); // passive + 1 worker at 100%
+      const prod5 = calculateProduction(mockBuildingType, 1, 5, HIGH_TOTAL_WORKERS); // passive + 5 workers with diminishing returns
 
       // First worker doubles production (100% efficient)
       expect(prod1).toBe(prod0 * 2);
 
-      // 5 workers should NOT be 6x the base (diminishing returns)
-      // But production should still increase
+      // With 5 workers, we get:
+      // - 1 passive + ~4.8 effective workers (low decay with 50 total) = ~5.8 total
+      // - Plus 15% milestone bonus at 5 workers = ~6.5 effective
+      // So prod5 should be between 6x and 7x base (with milestone), not 6x linear
       expect(prod5).toBeGreaterThan(prod1);
-      expect(prod5).toBeLessThan(prod0 * 6); // Less than linear scaling
+      expect(prod5).toBeLessThan(prod0 * 7); // Less than 7x with milestones
     });
 
     it('provides milestone bonus at 5 workers', () => {
       // At 5 workers, there's a 15% milestone bonus
-      const efficiency4 = calculateWorkerEfficiency(4, true);
-      const efficiency5 = calculateWorkerEfficiency(5, true);
+      const efficiency4 = calculateWorkerEfficiency(4, HIGH_TOTAL_WORKERS, true);
+      const efficiency5 = calculateWorkerEfficiency(5, HIGH_TOTAL_WORKERS, true);
 
       // The 5th worker triggers milestone, so effective workers jump more
       expect(efficiency5.milestoneBonus).toBe(1.15); // +15%
@@ -103,14 +110,14 @@ describe('Building Model', () => {
     });
 
     it('applies wave bonus', () => {
-      const prodNoBonus = calculateProduction(mockBuildingType, 1, 1, 1);
-      const prodWithBonus = calculateProduction(mockBuildingType, 1, 1, 2);
+      const prodNoBonus = calculateProduction(mockBuildingType, 1, 1, HIGH_TOTAL_WORKERS, 1);
+      const prodWithBonus = calculateProduction(mockBuildingType, 1, 1, HIGH_TOTAL_WORKERS, 2);
       expect(prodWithBonus).toBe(prodNoBonus * 2);
     });
 
     it('applies prestige bonus', () => {
-      const prodNoBonus = calculateProduction(mockBuildingType, 1, 1, 1, 1);
-      const prodWithBonus = calculateProduction(mockBuildingType, 1, 1, 1, 1.5);
+      const prodNoBonus = calculateProduction(mockBuildingType, 1, 1, HIGH_TOTAL_WORKERS, 1, 1);
+      const prodWithBonus = calculateProduction(mockBuildingType, 1, 1, HIGH_TOTAL_WORKERS, 1, 1.5);
       expect(prodWithBonus).toBe(prodNoBonus * 1.5);
     });
   });
@@ -212,17 +219,17 @@ describe('Building Cost Scaling (Balance Pacing Fix)', () => {
 describe('WorkerEfficiency', () => {
   describe('calculateWorkerEfficiency', () => {
     it('includes passive baseline by default', () => {
-      const withPassive = calculateWorkerEfficiency(0, true);
-      const withoutPassive = calculateWorkerEfficiency(0, false);
+      const withPassive = calculateWorkerEfficiency(0, HIGH_TOTAL_WORKERS, true);
+      const withoutPassive = calculateWorkerEfficiency(0, HIGH_TOTAL_WORKERS, false);
 
       expect(withPassive.effectiveWorkers).toBe(1); // Passive gives 1 effective
       expect(withoutPassive.effectiveWorkers).toBe(0);
     });
 
     it('combines workers and milestone bonuses', () => {
-      const result = calculateWorkerEfficiency(5, true);
+      const result = calculateWorkerEfficiency(5, HIGH_TOTAL_WORKERS, true);
 
-      // 1 passive + ~3.7 from 5 workers with diminishing returns
+      // 1 passive + workers with diminishing returns (low decay with 50 total workers)
       expect(result.totalEfficiency).toBeGreaterThan(4);
       expect(result.totalEfficiency).toBeLessThan(6);
 
@@ -231,6 +238,31 @@ describe('WorkerEfficiency', () => {
 
       // Effective workers = totalEfficiency * milestoneBonus
       expect(result.effectiveWorkers).toBeCloseTo(result.totalEfficiency * 1.15, 5);
+    });
+
+    it('has higher decay with fewer total workers owned', () => {
+      // With few total workers, decay is high (stacking punished)
+      const lowWorkers = calculateWorkerEfficiency(5, LOW_TOTAL_WORKERS, true);
+      // With many total workers, decay is low (reward for purchasing)
+      const highWorkers = calculateWorkerEfficiency(5, HIGH_TOTAL_WORKERS, true);
+
+      // Higher decay = lower efficiency
+      expect(lowWorkers.decayRate).toBeGreaterThan(highWorkers.decayRate);
+      expect(lowWorkers.effectiveWorkers).toBeLessThan(highWorkers.effectiveWorkers);
+    });
+
+    it('incentivizes spreading workers when total workers is low', () => {
+      // With 5 total workers, compare stacking all 5 vs spreading 2-2-1
+      const stacked5 = calculateWorkerEfficiency(5, LOW_TOTAL_WORKERS, true);
+      const spread2a = calculateWorkerEfficiency(2, LOW_TOTAL_WORKERS, true);
+      const spread2b = calculateWorkerEfficiency(2, LOW_TOTAL_WORKERS, true);
+      const spread1 = calculateWorkerEfficiency(1, LOW_TOTAL_WORKERS, true);
+
+      const stackedTotal = stacked5.effectiveWorkers;
+      const spreadTotal = spread2a.effectiveWorkers + spread2b.effectiveWorkers + spread1.effectiveWorkers;
+
+      // Spreading should be better than stacking with few total workers
+      expect(spreadTotal).toBeGreaterThan(stackedTotal);
     });
   });
 });

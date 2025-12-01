@@ -12,12 +12,14 @@
 // CONFIGURATION CONSTANTS
 // =============================================================================
 
-// Engineering Bay (cost reduction)
-export const ENGINEERING_BONUS_PER_LEVEL = 0.02;
+// Engineering Bay (cost reduction) - workers are primary scaling factor
+export const ENGINEERING_BONUS_PER_LEVEL = 0.008;
+export const ENGINEERING_BONUS_PER_WORKER = 0.008;
 export const ENGINEERING_MAX_DISCOUNT = 0.5; // 50% max discount
 
 // Shield Generator (wave timer extension)
-export const SHIELD_BONUS_PER_LEVEL = 0.5; // seconds
+export const SHIELD_BONUS_PER_LEVEL = 0.4; // seconds
+export const SHIELD_BONUS_PER_WORKER = 0.15; // seconds per worker
 export const SHIELD_MAX_BONUS_SECONDS = 30;
 
 // =============================================================================
@@ -50,23 +52,26 @@ export function calculateUpgradeCost(
 /**
  * Calculate Engineering Bay cost reduction multiplier.
  *
- * Formula: 1 - min(0.5, tierBaseDiscount + (level - 1) * 0.02)
+ * Formula: 1 - min(0.5, tierBaseDiscount + (level - 1) * levelBonus + workers * workerBonus)
+ * Workers are primary scaling factor (equal to level bonus).
  *
  * Returns a multiplier to apply to upgrade costs (e.g., 0.85 = 15% discount).
  *
- * Examples (Tier 1 = 10% base discount):
- * - Level 1: 0.90 (10% off)
- * - Level 5: 0.82 (18% off)
- * - Level 10: 0.72 (28% off)
+ * Examples (Tier 1 = 8% base discount):
+ * - Level 1, 0 workers: 0.92 (8% off)
+ * - Level 10, 10 workers: 0.778 (22.2% off)
+ * - Level 25, 50 workers: 0.50 (50% off, capped)
  *
  * Capped at 50% discount (0.5 multiplier).
  */
 export function calculateEngineeringDiscount(
   tierBaseDiscount: number,
   level: number,
+  assignedWorkers: number = 0,
 ): number {
   const levelBonus = (level - 1) * ENGINEERING_BONUS_PER_LEVEL;
-  const discountPercent = tierBaseDiscount + levelBonus;
+  const workerBonus = assignedWorkers * ENGINEERING_BONUS_PER_WORKER;
+  const discountPercent = tierBaseDiscount + levelBonus + workerBonus;
   const cappedDiscount = Math.min(ENGINEERING_MAX_DISCOUNT, discountPercent);
   return 1 - cappedDiscount;
 }
@@ -78,34 +83,39 @@ export function calculateEngineeringDiscount(
 /**
  * Calculate Shield Generator wave timer bonus.
  *
- * Formula: min(30, tierBaseBonus + (level - 1) * 0.5)
+ * Formula: min(30, tierBaseBonus + (level - 1) * levelBonus + workers * workerBonus)
+ * Workers provide meaningful scaling (0.15s per worker).
  *
- * Examples (Tier 1 = 5s base):
- * - Level 1: 5s
- * - Level 5: 7s
- * - Level 10: 9.5s
+ * Examples (Tier 1 = 3s base):
+ * - Level 1, 0 workers: 3s
+ * - Level 10, 10 workers: 8.1s
+ * - Level 25, 50 workers: 20.1s
  *
  * Capped at 30 seconds.
  */
 export function calculateShieldGeneratorBonus(
   tierBaseBonus: number,
   level: number,
+  assignedWorkers: number = 0,
 ): number {
   const levelBonus = (level - 1) * SHIELD_BONUS_PER_LEVEL;
-  return Math.min(SHIELD_MAX_BONUS_SECONDS, tierBaseBonus + levelBonus);
+  const workerBonus = assignedWorkers * SHIELD_BONUS_PER_WORKER;
+  return Math.min(SHIELD_MAX_BONUS_SECONDS, tierBaseBonus + levelBonus + workerBonus);
 }
 
 // =============================================================================
 // SPECIAL EFFECT FORMULAS
 // =============================================================================
 
-// Scrap Find configuration
-export const SCRAP_FIND_BASE_COOLDOWN_MS = 30000;
-export const SCRAP_FIND_COOLDOWN_PER_LEVEL_MS = 500;
-export const SCRAP_FIND_COOLDOWN_PER_WORKER_MS = 200;
-export const SCRAP_FIND_MIN_COOLDOWN_MS = 10000;
-export const SCRAP_FIND_BASE_REWARD_PERCENT = 0.20;
-export const SCRAP_FIND_TIER_MULTIPLIERS = [1.0, 1.25, 1.5, 1.75, 2.0];
+// Scrap Find configuration - workers reduce cooldown significantly
+export const SCRAP_FIND_BASE_COOLDOWN_MS = 25000;
+export const SCRAP_FIND_COOLDOWN_PER_LEVEL_MS = 300;
+export const SCRAP_FIND_COOLDOWN_PER_WORKER_MS = 250;
+export const SCRAP_FIND_MIN_COOLDOWN_MS = 8000;
+/** Base reward is 100% of wave reward (feels impactful) */
+export const SCRAP_FIND_BASE_REWARD_PERCENT = 1.0;
+/** Tier multipliers scale reward further at higher tiers */
+export const SCRAP_FIND_TIER_MULTIPLIERS = [1.0, 1.5, 2.0, 2.5, 3.0];
 
 /**
  * Calculate Scrap Find cooldown.
@@ -125,7 +135,8 @@ export function calculateScrapFindCooldown(
 /**
  * Calculate Scrap Find reward amount.
  *
- * Formula: waveReward * 0.20 * tierMultiplier * prestigeMultipliers
+ * Formula: waveReward * 1.0 * tierMultiplier * prestigeMultipliers
+ * Base is 100% of wave reward to feel impactful vs passive production.
  */
 export function calculateScrapFindAmount(
   waveReward: number,
@@ -138,65 +149,95 @@ export function calculateScrapFindAmount(
   return Math.floor(baseAmount * tierMultiplier * prestigeProductionBonus * prestigeWaveRewardBonus);
 }
 
-// Burst Boost configuration
-export const BURST_BOOST_BASE_CHANCE = 0.02;
-export const BURST_BOOST_CHANCE_PER_LEVEL = 0.005;
-export const BURST_BOOST_CHANCE_PER_WORKER = 0.002;
-export const BURST_BOOST_CHANCE_PER_TIER = 0.02;
-export const BURST_BOOST_MAX_TOTAL_CHANCE = 0.50;
+// Burst Boost configuration - workers are primary scaling factor
+export const BURST_BOOST_BASE_CHANCE = 0.03;
+export const BURST_BOOST_CHANCE_PER_LEVEL = 0.004;
+export const BURST_BOOST_CHANCE_PER_WORKER = 0.008;
+export const BURST_BOOST_CHANCE_PER_TIER = 0.025;
+export const BURST_BOOST_MAX_TOTAL_CHANCE = 0.60;
 
 /**
  * Calculate Burst Boost chance from Training Facility.
  *
- * Formula: baseChance + levelBonus + workerBonus + tierBonus (capped at 50%)
+ * Workers are PRIMARY scaling factor (0.008 vs 0.004 per level).
+ * With 50 workers + max prestige (burst_chance) + level 25 + tier 5:
+ * 0.03 + (24 * 0.004) + (50 * 0.008) + (4 * 0.025) + 0.23 = ~60% (capped)
+ *
+ * Note: The prestige burst_chance upgrade adds to this chance directly.
  */
 export function calculateBurstBoostChance(
   level: number,
   assignedBuilders: number,
   tier: number,
+  prestigeBurstChance: number = 0,
 ): number {
   const levelBonus = (level - 1) * BURST_BOOST_CHANCE_PER_LEVEL;
   const workerBonus = assignedBuilders * BURST_BOOST_CHANCE_PER_WORKER;
   const tierBonus = (tier - 1) * BURST_BOOST_CHANCE_PER_TIER;
-  const totalChance = BURST_BOOST_BASE_CHANCE + levelBonus + workerBonus + tierBonus;
+  const totalChance = BURST_BOOST_BASE_CHANCE + levelBonus + workerBonus + tierBonus + prestigeBurstChance;
   return Math.min(BURST_BOOST_MAX_TOTAL_CHANCE, totalChance);
 }
 
-// Critical Weakness configuration
+// Critical Weakness configuration - workers are primary scaling factor
 export const CRITICAL_WEAKNESS_BASE_CHANCE = 0.05;
-export const CRITICAL_WEAKNESS_CHANCE_PER_LEVEL = 0.01;
-export const CRITICAL_WEAKNESS_CHANCE_PER_WORKER = 0.005;
-export const CRITICAL_WEAKNESS_CHANCE_PER_TIER = 0.03;
-export const CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER = 5.0;
+export const CRITICAL_WEAKNESS_CHANCE_PER_LEVEL = 0.006;
+export const CRITICAL_WEAKNESS_CHANCE_PER_WORKER = 0.012;
+export const CRITICAL_WEAKNESS_CHANCE_PER_TIER = 0.04;
+export const CRITICAL_WEAKNESS_MAX_CHANCE = 0.95;
+/**
+ * @deprecated Use calculateWeakPointDamageMultiplier from combat.ts instead.
+ * This constant is kept for backward compatibility but the actual multiplier
+ * is now dynamically calculated based on tier, level, and workers.
+ */
+export const CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER = 4.0; // Max cap value
 
 /**
  * Calculate Critical Weakness chance from Weak Point Scanner.
+ *
+ * Workers are PRIMARY scaling factor (0.012 vs 0.006 per level).
+ * With 50 workers + max prestige (+12%) + level 25 + tier 5:
+ * 0.05 + (24 * 0.006) + (50 * 0.012) + (4 * 0.04) + 0.12 = ~95%
  */
 export function calculateCriticalWeaknessChance(
   level: number,
   assignedBuilders: number,
   tier: number,
+  prestigeBonus: number = 0,
 ): number {
   const levelBonus = (level - 1) * CRITICAL_WEAKNESS_CHANCE_PER_LEVEL;
   const workerBonus = assignedBuilders * CRITICAL_WEAKNESS_CHANCE_PER_WORKER;
   const tierBonus = (tier - 1) * CRITICAL_WEAKNESS_CHANCE_PER_TIER;
-  return CRITICAL_WEAKNESS_BASE_CHANCE + levelBonus + workerBonus + tierBonus;
+  const total = CRITICAL_WEAKNESS_BASE_CHANCE + levelBonus + workerBonus + tierBonus + prestigeBonus;
+  return Math.min(CRITICAL_WEAKNESS_MAX_CHANCE, total);
 }
 
-// Wave Extend configuration
-export const WAVE_EXTEND_BASE_CHANCE = 0.10;
-export const WAVE_EXTEND_CHANCE_PER_LEVEL = 0.02;
-export const WAVE_EXTEND_CHANCE_PER_TIER = 0.05;
+// Wave Extend configuration - workers are primary scaling factor
+export const WAVE_EXTEND_BASE_CHANCE = 0.08;
+export const WAVE_EXTEND_CHANCE_PER_LEVEL = 0.008;
+export const WAVE_EXTEND_CHANCE_PER_WORKER = 0.012;
+export const WAVE_EXTEND_CHANCE_PER_TIER = 0.04;
+export const WAVE_EXTEND_MAX_CHANCE = 0.85;
 export const WAVE_EXTEND_BONUS_TIME_PERCENT = 0.50;
 export const WAVE_EXTEND_MAX_BONUS_SECONDS = 30;
 
 /**
  * Calculate Wave Extend chance from Shield Generator.
+ *
+ * Workers are PRIMARY scaling factor (0.012 vs 0.008 per level).
+ * With 50 workers + max prestige (+7.2%) + level 25 + tier 5:
+ * 0.08 + (24 * 0.008) + (50 * 0.012) + (4 * 0.04) + 0.072 = ~85%
  */
-export function calculateWaveExtendChance(level: number, tier: number): number {
+export function calculateWaveExtendChance(
+  level: number,
+  tier: number,
+  assignedWorkers: number = 0,
+  prestigeBonus: number = 0,
+): number {
   const levelBonus = (level - 1) * WAVE_EXTEND_CHANCE_PER_LEVEL;
+  const workerBonus = assignedWorkers * WAVE_EXTEND_CHANCE_PER_WORKER;
   const tierBonus = (tier - 1) * WAVE_EXTEND_CHANCE_PER_TIER;
-  return WAVE_EXTEND_BASE_CHANCE + levelBonus + tierBonus;
+  const total = WAVE_EXTEND_BASE_CHANCE + levelBonus + workerBonus + tierBonus + prestigeBonus;
+  return Math.min(WAVE_EXTEND_MAX_CHANCE, total);
 }
 
 /**

@@ -23,7 +23,10 @@ export interface BuildingEvolutionTier {
   tier: number;
   name: string;
   description: string;
+  /** Wave required to unlock this building (tier 1 only) */
   unlockWave: number;
+  /** Level required to evolve to this tier (tier 2+) */
+  unlockLevel?: number;
   baseProduction: number;
   baseCost: number;
   iconName: string;
@@ -100,6 +103,10 @@ export const calculateUpgradeCost = (
  * Workers have diminishing returns - the more you assign, the less efficient each one is.
  * This encourages spreading workers across buildings rather than concentrating on one.
  *
+ * The decay rate scales based on total workers owned:
+ * - Few workers = steep decay (stacking punished, spreading encouraged)
+ * - Many workers = gentle decay (reward for purchasing more workers)
+ *
  * Features:
  * - Passive baseline: All buildings provide 1 effective worker equivalent
  * - Diminishing returns: Each additional worker is less efficient
@@ -107,7 +114,8 @@ export const calculateUpgradeCost = (
  *
  * @param buildingType - The building type definition
  * @param level - Current building level
- * @param assignedBuilders - Number of workers assigned
+ * @param assignedBuilders - Number of workers assigned to this building
+ * @param totalWorkersOwned - Total workers the player owns (for decay calculation)
  * @param waveBonus - Wave-based bonus multiplier (default 1)
  * @param prestigeBonus - Prestige bonus multiplier (default 1)
  * @param includePassive - Whether to include passive baseline (default true)
@@ -116,6 +124,7 @@ export const calculateProduction = (
   buildingType: BuildingType,
   level: number,
   assignedBuilders: number,
+  totalWorkersOwned: number,
   waveBonus: number = 1,
   prestigeBonus: number = 1,
   includePassive: boolean = true,
@@ -125,7 +134,7 @@ export const calculateProduction = (
   const levelMult = calculateLevelMultiplier(level);
 
   // Calculate effective workers with diminishing returns and milestone bonuses
-  const efficiency = calculateWorkerEfficiency(assignedBuilders, includePassive);
+  const efficiency = calculateWorkerEfficiency(assignedBuilders, totalWorkersOwned, includePassive);
   const effectiveWorkers = efficiency.effectiveWorkers;
 
   if (effectiveWorkers === 0) return 0;
@@ -140,6 +149,7 @@ export const getProductionBreakdown = (
   buildingType: BuildingType,
   level: number,
   assignedBuilders: number,
+  totalWorkersOwned: number,
   waveBonus: number = 1,
   prestigeBonus: number = 1,
 ): {
@@ -148,6 +158,7 @@ export const getProductionBreakdown = (
   effectiveWorkers: number;
   workerEfficiency: number;
   milestoneBonus: number;
+  decayRate: number;
   waveBonus: number;
   prestigeBonus: number;
   totalProduction: number;
@@ -155,7 +166,7 @@ export const getProductionBreakdown = (
   const baseOutput = buildingType.baseProduction;
   // Use centralized formula from src/data/formulas/production.ts
   const levelMult = calculateLevelMultiplier(level);
-  const efficiency = calculateWorkerEfficiency(assignedBuilders, true);
+  const efficiency = calculateWorkerEfficiency(assignedBuilders, totalWorkersOwned, true);
 
   return {
     baseProduction: baseOutput,
@@ -163,12 +174,14 @@ export const getProductionBreakdown = (
     effectiveWorkers: efficiency.effectiveWorkers,
     workerEfficiency: efficiency.averageEfficiency,
     milestoneBonus: efficiency.milestoneBonus,
+    decayRate: efficiency.decayRate,
     waveBonus,
     prestigeBonus,
     totalProduction: calculateProduction(
       buildingType,
       level,
       assignedBuilders,
+      totalWorkersOwned,
       waveBonus,
       prestigeBonus,
     ),

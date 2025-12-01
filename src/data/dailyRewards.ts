@@ -7,41 +7,43 @@ export interface DailyRewardDefinition {
   description: string;
 }
 
+// Daily rewards balanced for ~2hr first prestige economy
+// Day 1 scrap (100) = ~1-2 building upgrades, not game-breaking
 export const DAILY_REWARDS: DailyRewardDefinition[] = [
   {
     day: 1,
     type: 'scrap',
-    baseAmount: 1000,
+    baseAmount: 100,
     description: 'Welcome back!',
   },
   {
     day: 2,
     type: 'scrap',
-    baseAmount: 2500,
+    baseAmount: 250,
     description: 'Keep it up!',
   },
   {
     day: 3,
     type: 'blueprints',
-    baseAmount: 5,
+    baseAmount: 3,
     description: 'Blueprint bonus!',
   },
   {
     day: 4,
     type: 'scrap',
-    baseAmount: 5000,
+    baseAmount: 500,
     description: 'Halfway there!',
   },
   {
     day: 5,
     type: 'blueprints',
-    baseAmount: 10,
+    baseAmount: 5,
     description: 'Big blueprint day!',
   },
   {
     day: 6,
     type: 'scrap',
-    baseAmount: 10000,
+    baseAmount: 1000,
     description: 'Almost there!',
   },
   {

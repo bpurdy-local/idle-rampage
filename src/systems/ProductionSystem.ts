@@ -28,6 +28,7 @@ export interface ProductionBonuses {
   boostMultiplier: number;
   commandCenterBonus: number;
   tierMultiplier: number;
+  totalWorkersOwned: number;
 }
 
 export class ProductionSystem {
@@ -77,6 +78,7 @@ export class ProductionSystem {
       buildingType.baseProduction,
       building.level,
       building.assignedBuilders,
+      bonuses.totalWorkersOwned,
       bonuses.waveBonus,
       bonuses.prestigeBonus,
     );

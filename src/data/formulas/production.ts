@@ -13,8 +13,11 @@
 // CONFIGURATION CONSTANTS
 // =============================================================================
 
-/** Level scaling: production multiplier per level above 1 */
-export const LEVEL_MULTIPLIER_PER_LEVEL = 0.75;
+/** Level scaling: exponential base for production multiplier */
+export const LEVEL_MULTIPLIER_BASE = 1.04;
+
+/** Soft cap for level scaling - growth slows after this */
+export const LEVEL_SOFT_CAP = 50;
 
 /** Offline production efficiency (50%) */
 export const OFFLINE_EFFICIENCY = 0.5;
@@ -23,23 +26,54 @@ export const OFFLINE_EFFICIENCY = 0.5;
 export const MAX_OFFLINE_HOURS = 8;
 
 /** Command Center bonus per level above 1 */
-export const COMMAND_CENTER_BONUS_PER_LEVEL = 0.02;
+export const COMMAND_CENTER_BONUS_PER_LEVEL = 0.01;
 
-// Worker efficiency constants
-export const WORKER_EFFICIENCY_DECAY = 0.12;
+/** Command Center bonus per worker */
+export const COMMAND_CENTER_BONUS_PER_WORKER = 0.01;
 
+/** Command Center max boost cap */
+export const COMMAND_CENTER_MAX_BOOST = 0.80;
+
+// =============================================================================
+// WORKER EFFICIENCY CONSTANTS
+// =============================================================================
+// Decay rate scales based on total workers owned (not per-building).
+// Players with few workers face steep diminishing returns for stacking,
+// incentivizing spreading workers across buildings.
+// Players who purchase more workers get a gentler decay curve as a reward.
+
+/** Decay rate when player has minimum workers (high penalty for stacking) */
+export const WORKER_EFFICIENCY_BASE_DECAY = 0.20;
+
+/** Decay rate when player has many workers (reward for purchasing) */
+export const WORKER_EFFICIENCY_MIN_DECAY = 0.04;
+
+/** Total workers at which decay reaches minimum rate */
+export const WORKER_EFFICIENCY_SCALING_CAP = 50;
+
+/** Worker milestone bonuses for assigning many workers to a single building */
 export const WORKER_MILESTONES = [
   {threshold: 5, bonus: 0.15, name: 'Coordinated Team'},
-  {threshold: 10, bonus: 0.25, name: 'Efficient Squad'},
-  {threshold: 20, bonus: 0.35, name: 'Master Crew'},
+  {threshold: 10, bonus: 0.30, name: 'Efficient Squad'},
+  {threshold: 20, bonus: 0.50, name: 'Master Crew'},
+] as const;
+
+// Level milestones for production bonus
+export const LEVEL_MILESTONES = [
+  {level: 25, bonus: 0.20},
+  {level: 50, bonus: 0.40},
+  {level: 75, bonus: 0.60},
+  {level: 100, bonus: 0.80},
 ] as const;
 
 // Wave bonus constants
-export const WAVE_BONUS_LOG_MULTIPLIER = 0.5;
-export const WAVE_BONUS_LINEAR_PER_WAVE = 0.02;
+export const WAVE_BONUS_LOG_MULTIPLIER = 0.6;
+export const WAVE_BONUS_LINEAR_PER_WAVE = 0.025;
 export const WAVE_MILESTONES = [
+  {wave: 15, bonus: 0.15},
   {wave: 25, bonus: 0.25},
-  {wave: 50, bonus: 0.5},
+  {wave: 40, bonus: 0.40},
+  {wave: 50, bonus: 0.50},
   {wave: 75, bonus: 0.75},
   {wave: 100, bonus: 1.0},
 ] as const;
@@ -49,20 +83,46 @@ export const WAVE_MILESTONES = [
 // =============================================================================
 
 /**
+ * Calculate the decay rate based on total workers owned.
+ *
+ * Formula: decayRate = baseDecay - (baseDecay - minDecay) * (totalWorkers / cap)
+ *
+ * With fewer workers, decay is high (stacking is punished).
+ * With more workers, decay is low (reward for purchasing).
+ *
+ * Examples (with base=0.20, min=0.04, cap=50):
+ * - 5 total workers: 0.184 decay
+ * - 10 total workers: 0.168 decay
+ * - 20 total workers: 0.136 decay
+ * - 50 total workers: 0.040 decay (minimum)
+ */
+export function calculateDecayRate(totalWorkersOwned: number): number {
+  const cappedWorkers = Math.min(totalWorkersOwned, WORKER_EFFICIENCY_SCALING_CAP);
+  const scalingFactor = cappedWorkers / WORKER_EFFICIENCY_SCALING_CAP;
+  return (
+    WORKER_EFFICIENCY_BASE_DECAY -
+    (WORKER_EFFICIENCY_BASE_DECAY - WORKER_EFFICIENCY_MIN_DECAY) * scalingFactor
+  );
+}
+
+/**
  * Calculate efficiency of a single worker at a given position.
  *
  * Formula: efficiency = 1 / (1 + (position - 1) * decay)
  *
- * Examples (with 0.12 decay):
+ * @param workerPosition - The position of this worker (1st, 2nd, etc.)
+ * @param decayRate - The decay rate (use calculateDecayRate to get this)
+ *
+ * Examples (with 0.184 decay at 5 total workers):
  * - Worker 1: 100%
- * - Worker 2: ~89%
- * - Worker 5: ~68%
- * - Worker 10: ~48%
- * - Worker 20: ~30%
+ * - Worker 2: 84%
+ * - Worker 3: 73%
+ * - Worker 4: 65%
+ * - Worker 5: 58%
  */
 export function calculateSingleWorkerEfficiency(
   workerPosition: number,
-  decayRate: number = WORKER_EFFICIENCY_DECAY,
+  decayRate: number,
 ): number {
   if (workerPosition <= 0) return 0;
   if (workerPosition === 1) return 1;
@@ -72,13 +132,17 @@ export function calculateSingleWorkerEfficiency(
 /**
  * Calculate total efficiency from all assigned workers.
  * Returns the sum of each worker's individual efficiency.
+ *
+ * @param assignedWorkers - Workers assigned to this building
+ * @param totalWorkersOwned - Total workers the player owns (for decay calculation)
  */
 export function calculateTotalWorkerEfficiency(
   assignedWorkers: number,
-  decayRate: number = WORKER_EFFICIENCY_DECAY,
+  totalWorkersOwned: number,
 ): number {
   if (assignedWorkers <= 0) return 0;
 
+  const decayRate = calculateDecayRate(totalWorkersOwned);
   let total = 0;
   for (let i = 1; i <= assignedWorkers; i++) {
     total += calculateSingleWorkerEfficiency(i, decayRate);
@@ -105,20 +169,24 @@ export interface WorkerEfficiencyResult {
   averageEfficiency: number;
   milestoneBonus: number;
   effectiveWorkers: number;
+  decayRate: number;
 }
 
 /**
  * Calculate complete worker efficiency breakdown.
  *
  * @param assignedWorkers - Number of workers assigned to the building
+ * @param totalWorkersOwned - Total workers the player owns (for decay calculation)
  * @param includePassive - Whether to include passive baseline (1 worker equivalent)
  */
 export function calculateWorkerEfficiency(
   assignedWorkers: number,
+  totalWorkersOwned: number,
   includePassive: boolean = true,
 ): WorkerEfficiencyResult {
+  const decayRate = calculateDecayRate(totalWorkersOwned);
   const passiveEfficiency = includePassive ? 1 : 0;
-  const workerEfficiency = calculateTotalWorkerEfficiency(assignedWorkers);
+  const workerEfficiency = calculateTotalWorkerEfficiency(assignedWorkers, totalWorkersOwned);
   const totalEfficiency = passiveEfficiency + workerEfficiency;
   const milestoneBonus = calculateWorkerMilestoneBonus(assignedWorkers);
   const averageEfficiency = assignedWorkers > 0 ? workerEfficiency / assignedWorkers : 1;
@@ -129,6 +197,7 @@ export function calculateWorkerEfficiency(
     averageEfficiency,
     milestoneBonus,
     effectiveWorkers,
+    decayRate,
   };
 }
 
@@ -137,34 +206,72 @@ export function calculateWorkerEfficiency(
 // =============================================================================
 
 /**
+ * Calculate level milestone bonus.
+ * Bonuses stack additively at levels 25, 50, 75, 100.
+ */
+export function calculateLevelMilestoneBonus(level: number): number {
+  let bonus = 0;
+  for (const milestone of LEVEL_MILESTONES) {
+    if (level >= milestone.level) {
+      bonus += milestone.bonus;
+    }
+  }
+  return 1 + bonus;
+}
+
+/**
  * Calculate building level multiplier.
  *
- * Formula: 1 + (level - 1) * 0.75
+ * Formula: 1.04^(level-1) with soft cap at level 50
+ * After soft cap, growth is logarithmic.
  *
  * Examples:
  * - Level 1: 1.0x
- * - Level 5: 4.0x
- * - Level 10: 7.75x
+ * - Level 10: 1.48x
+ * - Level 25: 2.56x
+ * - Level 50: 7.1x
+ * - Level 100: ~12x (diminishing after soft cap)
  */
 export function calculateLevelMultiplier(level: number): number {
-  return 1 + (level - 1) * LEVEL_MULTIPLIER_PER_LEVEL;
+  if (level <= 1) return 1;
+
+  if (level <= LEVEL_SOFT_CAP) {
+    // Exponential growth before soft cap
+    return Math.pow(LEVEL_MULTIPLIER_BASE, level - 1);
+  }
+
+  // After soft cap: base exponential + logarithmic growth
+  const softCapMultiplier = Math.pow(LEVEL_MULTIPLIER_BASE, LEVEL_SOFT_CAP - 1);
+  const levelsAboveCap = level - LEVEL_SOFT_CAP;
+  const logarithmicBonus = Math.log10(levelsAboveCap + 1) * 2;
+
+  return softCapMultiplier * (1 + logarithmicBonus * 0.1);
 }
 
 /**
  * Calculate building production output.
  *
  * Formula: baseProduction * levelMultiplier * effectiveWorkers * waveBonus * prestigeBonus
+ *
+ * @param baseProduction - Base production value of the building
+ * @param level - Building level
+ * @param assignedBuilders - Workers assigned to this building
+ * @param totalWorkersOwned - Total workers the player owns (for decay calculation)
+ * @param waveBonus - Wave-based production bonus multiplier
+ * @param prestigeBonus - Prestige-based production bonus multiplier
+ * @param includePassive - Whether to include passive baseline (1 worker equivalent)
  */
 export function calculateBuildingProduction(
   baseProduction: number,
   level: number,
   assignedBuilders: number,
+  totalWorkersOwned: number,
   waveBonus: number = 1,
   prestigeBonus: number = 1,
   includePassive: boolean = true,
 ): number {
   const levelMultiplier = calculateLevelMultiplier(level);
-  const efficiency = calculateWorkerEfficiency(assignedBuilders, includePassive);
+  const efficiency = calculateWorkerEfficiency(assignedBuilders, totalWorkersOwned, includePassive);
 
   if (efficiency.effectiveWorkers === 0) return 0;
 

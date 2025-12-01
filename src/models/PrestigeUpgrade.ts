@@ -5,7 +5,10 @@ export type PrestigeEffectType =
   | 'wave_rewards'
   | 'burst_chance'
   | 'burst_damage'
-  | 'starting_scrap';
+  | 'starting_scrap'
+  | 'critical_chance'
+  | 'wave_extend_chance'
+  | 'scrap_find_bonus';
 
 export interface PrestigeUpgradeDefinition {
   id: string;

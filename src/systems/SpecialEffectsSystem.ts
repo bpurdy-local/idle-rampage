@@ -7,8 +7,11 @@ import {
   calculateCriticalWeaknessChance as calculateCriticalWeaknessChanceFormula,
   calculateWaveExtendChance as calculateWaveExtendChanceFormula,
   calculateWaveExtendBonus as calculateWaveExtendBonusFormula,
+  calculateWeakPointDamageMultiplier,
   BURST_BOOST_MAX_TOTAL_CHANCE,
+  CRITICAL_WEAKNESS_MAX_CHANCE,
   CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER,
+  WAVE_EXTEND_MAX_CHANCE,
 } from '../data/formulas';
 
 export interface ScrapFindResult {
@@ -95,9 +98,11 @@ export class SpecialEffectsSystem {
     level: number,
     assignedBuilders: number,
     tier: number,
+    prestigeBurstChance: number = 0,
   ): number {
     // Use centralized formula from src/data/formulas/economy.ts
-    return calculateBurstBoostChanceFormula(level, assignedBuilders, tier);
+    // Now includes prestige bonus for synergy
+    return calculateBurstBoostChanceFormula(level, assignedBuilders, tier, prestigeBurstChance);
   }
 
   getBurstBoostFromBuilding(building: BuildingState): BurstBoostResult {
@@ -137,12 +142,29 @@ export class SpecialEffectsSystem {
     level: number,
     assignedBuilders: number,
     tier: number,
+    prestigeBonus: number = 0,
   ): number {
     // Use centralized formula from src/data/formulas/economy.ts
-    return calculateCriticalWeaknessChanceFormula(level, assignedBuilders, tier);
+    // Now includes prestige bonus for synergy with 'critical_eye' upgrade
+    return calculateCriticalWeaknessChanceFormula(level, assignedBuilders, tier, prestigeBonus);
   }
 
-  shouldSpawnCriticalWeakness(building: BuildingState): CriticalWeaknessResult {
+  /**
+   * Calculate critical weakness damage multiplier.
+   * Uses the weak point scanner stats to determine the multiplier.
+   */
+  calculateCriticalDamageMultiplier(
+    scannerTier: number,
+    scannerLevel: number,
+    assignedBuilders: number,
+  ): number {
+    return calculateWeakPointDamageMultiplier(scannerTier, scannerLevel, assignedBuilders);
+  }
+
+  shouldSpawnCriticalWeakness(
+    building: BuildingState,
+    prestigeBonus: number = 0,
+  ): CriticalWeaknessResult {
     const evolvable = getEvolvableBuildingById(building.typeId);
     if (!evolvable || !building.isUnlocked) {
       return {isCritical: false, damageMultiplier: 1};
@@ -157,23 +179,52 @@ export class SpecialEffectsSystem {
       building.level,
       building.assignedBuilders,
       building.evolutionTier,
+      prestigeBonus,
     );
 
-    const isCritical = Math.random() < chance;
+    // Apply max chance cap
+    const cappedChance = Math.min(CRITICAL_WEAKNESS_MAX_CHANCE, chance);
+    const isCritical = Math.random() < cappedChance;
+
+    // Calculate damage multiplier based on building stats
+    const damageMultiplier = isCritical
+      ? this.calculateCriticalDamageMultiplier(
+          building.evolutionTier,
+          building.level,
+          building.assignedBuilders,
+        )
+      : 1;
 
     return {
       isCritical,
-      damageMultiplier: isCritical ? CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER : 1,
+      damageMultiplier,
     };
   }
 
+  /**
+   * Get the maximum possible critical damage multiplier (capped at 4x).
+   */
+  getMaxCriticalDamageMultiplier(): number {
+    return 4.0; // From WEAK_POINT_MAX_MULTIPLIER
+  }
+
+  /**
+   * @deprecated Use calculateCriticalDamageMultiplier or getMaxCriticalDamageMultiplier instead.
+   * Kept for backward compatibility.
+   */
   getCriticalWeaknessDamageMultiplier(): number {
     return CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER;
   }
 
-  calculateWaveExtendChance(level: number, tier: number): number {
+  calculateWaveExtendChance(
+    level: number,
+    tier: number,
+    assignedWorkers: number = 0,
+    prestigeBonus: number = 0,
+  ): number {
     // Use centralized formula from src/data/formulas/economy.ts
-    return calculateWaveExtendChanceFormula(level, tier);
+    // Now includes workers and prestige bonus for synergy with 'time_dilation' upgrade
+    return calculateWaveExtendChanceFormula(level, tier, assignedWorkers, prestigeBonus);
   }
 
   calculateWaveExtendBonus(baseWaveTime: number): number {
@@ -184,6 +235,7 @@ export class SpecialEffectsSystem {
   checkWaveExtension(
     building: BuildingState,
     baseWaveTime: number,
+    prestigeBonus: number = 0,
   ): WaveExtendResult {
     const evolvable = getEvolvableBuildingById(building.typeId);
     if (!evolvable || !building.isUnlocked) {
@@ -198,9 +250,13 @@ export class SpecialEffectsSystem {
     const chance = this.calculateWaveExtendChance(
       building.level,
       building.evolutionTier,
+      building.assignedBuilders,
+      prestigeBonus,
     );
 
-    const triggered = Math.random() < chance;
+    // Apply max chance cap
+    const cappedChance = Math.min(WAVE_EXTEND_MAX_CHANCE, chance);
+    const triggered = Math.random() < cappedChance;
     if (!triggered) {
       return {triggered: false, bonusSeconds: 0};
     }
@@ -212,10 +268,11 @@ export class SpecialEffectsSystem {
   checkWaveExtensionFromBuildings(
     buildings: BuildingState[],
     baseWaveTime: number,
+    prestigeBonus: number = 0,
   ): WaveExtendResult {
     for (const building of buildings) {
       if (building.typeId === 'shield_generator') {
-        const result = this.checkWaveExtension(building, baseWaveTime);
+        const result = this.checkWaveExtension(building, baseWaveTime, prestigeBonus);
         if (result.triggered) {
           return result;
         }

@@ -13,7 +13,6 @@ import {
   getMaxTotalBuilders,
   getEvolvableBuildingById,
   getCurrentEvolutionTier,
-  getBuildingsEvolvingAtWave,
   getBuildingsUnlockingAtWave,
 } from '../data/buildings';
 import {getTierForPrestigeCount, wouldUnlockMilestone} from '../data/prestigeMilestones';
@@ -37,6 +36,7 @@ interface GameActions {
   setBuildings: (buildings: BuildingState[]) => void;
   updateBuilding: (buildingId: string, updates: Partial<BuildingState>) => void;
   upgradeBuilding: (buildingId: string) => void;
+  evolveBuilding: (buildingId: string) => boolean;
 
   setCurrentEnemy: (enemy: EnemyState | null) => void;
   damageEnemy: (damage: number) => void;
@@ -394,10 +394,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const index = buildings.findIndex(b => b.id === buildingId);
     if (index === -1) return;
 
+    const building = buildings[index];
+    const newLevel = building.level + 1;
+
+    // Evolution is now manual - don't auto-evolve on upgrade
     const updatedBuildings = [...buildings];
     updatedBuildings[index] = {
-      ...buildings[index],
-      level: buildings[index].level + 1,
+      ...building,
+      level: newLevel,
       upgradeProgress: 0,
     };
     set({buildings: updatedBuildings});
@@ -405,6 +409,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
       buildingId,
       newLevel: updatedBuildings[index].level,
     });
+  },
+
+  evolveBuilding: (buildingId: string) => {
+    const buildings = get().buildings;
+    const index = buildings.findIndex(b => b.id === buildingId);
+    if (index === -1) return false;
+
+    const building = buildings[index];
+    const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+    if (!evolvableBuilding) return false;
+
+    // Check if evolution is available based on current level
+    const maxAvailableTier = getCurrentEvolutionTier(evolvableBuilding, building.level);
+    if (maxAvailableTier.tier <= building.evolutionTier) {
+      // Already at max available tier
+      return false;
+    }
+
+    // Find the next tier (one above current)
+    const nextTierIndex = building.evolutionTier; // 0-indexed, so current tier = next index
+    const nextTier = evolvableBuilding.tiers[nextTierIndex];
+    if (!nextTier) return false;
+
+    // Evolve to the next tier
+    const updatedBuildings = [...buildings];
+    updatedBuildings[index] = {
+      ...building,
+      evolutionTier: nextTier.tier,
+    };
+    set({buildings: updatedBuildings});
+
+    // Emit evolution event
+    eventBus.emit(GameEvents.BUILDING_EVOLVED, {
+      buildingId: evolvableBuilding.id,
+      newTier: nextTier,
+      isNewUnlock: false,
+    });
+
+    return true;
   },
 
   setCurrentEnemy: (enemy: EnemyState | null) =>
@@ -467,13 +510,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
       }
 
-      // Check for evolution
-      if (building.isUnlocked || updated.isUnlocked) {
-        const currentTier = getCurrentEvolutionTier(evolvableBuilding, newWave);
-        if (currentTier.tier > building.evolutionTier) {
-          updated.evolutionTier = currentTier.tier;
-        }
-      }
+      // Evolution is now level-based, not wave-based
+      // It's checked in upgradeBuilding instead
 
       return updated;
     });
@@ -490,7 +528,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Emit wave cleared event
     eventBus.emit(GameEvents.WAVE_CLEARED, {wave: state.currentWave});
 
-    // Check for and emit building unlock events (tier 1)
+    // Check for and emit building unlock events (tier 1 only)
     const unlocks = getBuildingsUnlockingAtWave(newWave);
     for (const {building, tier} of unlocks) {
       eventBus.emit(GameEvents.BUILDING_EVOLVED, {
@@ -500,15 +538,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     }
 
-    // Check for and emit building evolution events (tier 2+)
-    const evolutions = getBuildingsEvolvingAtWave(newWave);
-    for (const {building, newTier} of evolutions) {
-      eventBus.emit(GameEvents.BUILDING_EVOLVED, {
-        buildingId: building.id,
-        newTier: newTier,
-        isNewUnlock: false,
-      });
-    }
+    // Note: Evolution events (tier 2+) are now emitted from upgradeBuilding
+    // when the building level triggers the evolution
   },
 
   setPrestigeUpgrade: (upgradeId: string, level: number) => {
