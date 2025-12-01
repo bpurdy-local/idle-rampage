@@ -144,7 +144,7 @@ const WeakPointMarker: React.FC<{
     opacity: pulseOpacity.value,
   }));
 
-  const sizeMultiplier = point.isCritical ? 1.2 : 1;
+  const sizeMultiplier = point.isCritical ? 0.7 : 1;
   const adjustedSize = point.size * sizeMultiplier;
 
   return (

@@ -25,10 +25,10 @@ export const BOSS_REWARD_MULTIPLIER = 4.0;
 export const BOSS_TIMER_MULTIPLIER = 1.8;
 
 // Wave reward configuration - balanced for ~2hr first prestige
-export const WAVE_REWARD_BASE_PER_WAVE = 25;
-export const WAVE_REWARD_POLYNOMIAL_EXPONENT = 1.3;
-export const WAVE_REWARD_MULTIPLIER_PER_20_WAVES = 0.15;
-export const WAVE_REWARD_MULTIPLIER_CAP = 3;
+export const WAVE_REWARD_BASE_PER_WAVE = 50;
+export const WAVE_REWARD_POLYNOMIAL_EXPONENT = 1.4;
+export const WAVE_REWARD_MULTIPLIER_PER_20_WAVES = 0.2;
+export const WAVE_REWARD_MULTIPLIER_CAP = 4;
 
 // =============================================================================
 // ENEMY SCALING FORMULAS

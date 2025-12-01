@@ -12,20 +12,20 @@
 // CONFIGURATION CONSTANTS
 // =============================================================================
 
-// Blueprint earning
-export const BASE_BLUEPRINT_WAVE = 40;
-export const BASE_BLUEPRINTS_REWARD = 20;
-export const BLUEPRINTS_PER_WAVE_ABOVE_BASE = 3;
-export const BLUEPRINT_WAVE_SCALING = 1.06;
+// Blueprint earning - wave 100 = ~1000 blueprints
+export const BASE_BLUEPRINT_WAVE = 30;
+export const BASE_BLUEPRINTS_REWARD = 10;
+export const BLUEPRINTS_PER_WAVE_ABOVE_BASE = 5;
+export const BLUEPRINT_WAVE_SCALING = 1.05;
 
-// Builder purchase costs (escalating tiers)
-export const BUILDER_COST_TIER_1 = 8; // Builders 1-10
-export const BUILDER_COST_TIER_2 = 15; // Builders 11-25
-export const BUILDER_COST_TIER_3 = 30; // Builders 26-50
-export const BUILDER_COST_TIER_4 = 60; // Builders 51-100
+// Builder purchase costs (escalating tiers, max 500)
+export const BUILDER_COST_TIER_1 = 5; // Builders 1-10
+export const BUILDER_COST_TIER_2 = 10; // Builders 11-25
+export const BUILDER_COST_TIER_3 = 25; // Builders 26-50
+export const BUILDER_COST_TIER_4 = 50; // Builders 51-100
 export const BUILDER_COST_TIER_5 = 100; // Builders 101-150
-export const BUILDER_COST_TIER_6 = 175; // Builders 151-200
-export const BUILDER_COST_TIER_7 = 300; // Builders 201-250
+export const BUILDER_COST_TIER_6 = 250; // Builders 151-200
+export const BUILDER_COST_TIER_7 = 500; // Builders 201-250
 
 // Starting scrap bonus
 export const STARTING_SCRAP_PER_WAVE_PER_LEVEL = 100;
@@ -51,7 +51,7 @@ export const PRESTIGE_RANKS = [
 /**
  * Check if player can prestige.
  *
- * Requirement: Wave 100+
+ * Requirement: Wave 30+
  */
 export function canPrestige(waveReached: number): boolean {
   return waveReached >= BASE_BLUEPRINT_WAVE;
@@ -61,16 +61,15 @@ export function canPrestige(waveReached: number): boolean {
  * Calculate blueprints earned from prestiging.
  *
  * Formula:
- * - Below wave 40: 0 blueprints
- * - Wave 40: 20 blueprints
- * - Each wave above 40: +3 * (1.06 ^ wavesAbove40)
+ * - Below wave 30: 0 blueprints
+ * - Wave 30: 10 blueprints
+ * - Each wave above 30: +5 * (1.05 ^ wavesAbove30)
  *
  * Examples:
- * - Wave 40: 20 blueprints
- * - Wave 50: 55 blueprints
- * - Wave 75: 175 blueprints
- * - Wave 100: 420 blueprints
- * - Wave 150: 1,400 blueprints
+ * - Wave 30: 10 blueprints
+ * - Wave 50: ~180 blueprints
+ * - Wave 75: ~500 blueprints
+ * - Wave 100: ~1000 blueprints (max wave)
  */
 export function calculateBlueprintsEarned(waveReached: number): number {
   if (waveReached < BASE_BLUEPRINT_WAVE) return 0;
@@ -127,14 +126,14 @@ export function calculateUpgradeEffect(
 /**
  * Calculate cost to purchase a builder with blueprints.
  *
- * Escalating pricing:
- * - Builders 1-10: 8 blueprints
- * - Builders 11-25: 15 blueprints
- * - Builders 26-50: 30 blueprints
- * - Builders 51-100: 60 blueprints
+ * Escalating pricing (max 500):
+ * - Builders 1-10: 5 blueprints
+ * - Builders 11-25: 10 blueprints
+ * - Builders 26-50: 25 blueprints
+ * - Builders 51-100: 50 blueprints
  * - Builders 101-150: 100 blueprints
- * - Builders 151-200: 175 blueprints
- * - Builders 201-250: 300 blueprints
+ * - Builders 151-200: 250 blueprints
+ * - Builders 201-250: 500 blueprints
  */
 export function calculateBuilderPurchaseCost(buildersPurchased: number): number {
   if (buildersPurchased < 10) return BUILDER_COST_TIER_1;
