@@ -1,6 +1,6 @@
 /**
  * Debug configuration for testing.
- * SET ALL TO FALSE BEFORE RELEASE!
+ * SET ALL TO FALSE/DEFAULT BEFORE RELEASE!
  */
 export const DEBUG_CONFIG = {
   // Master toggle - set to false to disable all debug features
@@ -10,6 +10,11 @@ export const DEBUG_CONFIG = {
   SCRAP_MULTIPLIER: 1, // 1x scrap gains (normal)
   DAMAGE_MULTIPLIER: 1, // 1x damage dealt (normal)
   WAVE_TIMER_MULTIPLIER: 1, // 1x wave timer (normal)
+
+  // Starting state overrides (only applied on new game / reset)
+  START_WAVE: 1, // Start at this wave (1 = normal)
+  START_SCRAP: 100, // Starting scrap amount
+  START_BUILDERS: 5, // Starting builder count
 
   // Instant unlocks
   UNLOCK_ALL_BUILDINGS: false, // Start with all buildings unlocked

@@ -88,108 +88,119 @@ export interface GameState {
   specialEffects: SpecialEffectState;
 }
 
-export const createInitialGameState = (): GameState => ({
-  player: {
-    scrap: 100, // Starting scrap for first building upgrade
-    blueprints: 0,
-    totalBlueprintsEarned: 0,
-    prestigeCount: 0,
-    buildingTier: 0,
-    highestWave: 0,
-    totalTaps: 0,
-    totalEnemiesDefeated: 0,
-    totalScrapEarned: 0,
-    builders: {
-      total: 5, // Start with 5 builders
-      available: 5,
-      maxBuilders: 250, // Increased max builders cap
+import {DEBUG_CONFIG} from '../data/debugConfig';
+import {BASE_TAP_DAMAGE} from '../data/formulas';
+
+export const createInitialGameState = (): GameState => {
+  const debugEnabled = DEBUG_CONFIG.ENABLED;
+  const startBuilders = debugEnabled ? DEBUG_CONFIG.START_BUILDERS : 5;
+  const startScrap = debugEnabled ? DEBUG_CONFIG.START_SCRAP : 100;
+  const startWave = debugEnabled ? DEBUG_CONFIG.START_WAVE : 1;
+  const unlockAll = debugEnabled && DEBUG_CONFIG.UNLOCK_ALL_BUILDINGS;
+
+  return {
+    player: {
+      scrap: startScrap,
+      blueprints: 0,
+      totalBlueprintsEarned: 0,
+      prestigeCount: 0,
+      buildingTier: 0,
+      highestWave: 0,
+      totalTaps: 0,
+      totalEnemiesDefeated: 0,
+      totalScrapEarned: 0,
+      builders: {
+        total: startBuilders,
+        available: startBuilders,
+        maxBuilders: 250,
+      },
+      prestigeUpgrades: {},
+      activeBoosts: [],
+      buildersPurchased: 0,
     },
-    prestigeUpgrades: {},
-    activeBoosts: [],
-    buildersPurchased: 0,
-  },
-  buildings: [
-    {
-      id: 'scrap_works_1',
-      typeId: 'scrap_works',
-      level: 1,
-      assignedBuilders: 0,
-      productionProgress: 0,
-      upgradeProgress: 0,
-      isUnlocked: true, // unlockWave: 1
-      evolutionTier: 1,
+    buildings: [
+      {
+        id: 'training_facility_1',
+        typeId: 'training_facility',
+        level: 1,
+        assignedBuilders: 0,
+        productionProgress: 0,
+        upgradeProgress: 0,
+        isUnlocked: true, // unlockWave: 1
+        evolutionTier: 1,
+      },
+      {
+        id: 'scrap_works_1',
+        typeId: 'scrap_works',
+        level: 1,
+        assignedBuilders: 0,
+        productionProgress: 0,
+        upgradeProgress: 0,
+        isUnlocked: unlockAll || startWave >= 3, // unlockWave: 3
+        evolutionTier: 1,
+      },
+      {
+        id: 'weak_point_scanner_1',
+        typeId: 'weak_point_scanner',
+        level: 1,
+        assignedBuilders: 0,
+        productionProgress: 0,
+        upgradeProgress: 0,
+        isUnlocked: unlockAll || startWave >= 5, // unlockWave: 5
+        evolutionTier: 1,
+      },
+      {
+        id: 'shield_generator_1',
+        typeId: 'shield_generator',
+        level: 1,
+        assignedBuilders: 0,
+        productionProgress: 0,
+        upgradeProgress: 0,
+        isUnlocked: unlockAll || startWave >= 10, // unlockWave: 10
+        evolutionTier: 1,
+      },
+      {
+        id: 'command_center_1',
+        typeId: 'command_center',
+        level: 1,
+        assignedBuilders: 0,
+        productionProgress: 0,
+        upgradeProgress: 0,
+        isUnlocked: unlockAll || startWave >= 15, // unlockWave: 15
+        evolutionTier: 1,
+      },
+      {
+        id: 'engineering_bay_1',
+        typeId: 'engineering_bay',
+        level: 1,
+        assignedBuilders: 0,
+        productionProgress: 0,
+        upgradeProgress: 0,
+        isUnlocked: unlockAll || startWave >= 20, // unlockWave: 20
+        evolutionTier: 1,
+      },
+    ],
+    combat: {
+      isActive: false,
+      currentEnemy: null,
+      waveTimer: 0,
+      waveTimerMax: 30, // Matches BASE_WAVE_TIMER_SECONDS in progression.ts
+      autoDamagePerTick: 1,
+      burstChance: 0, // DEFAULT_BURST_CHANCE - burst only from Training Facility
+      burstMultiplier: 6, // DEFAULT_BURST_MULTIPLIER from combat.ts
+      baseTapDamage: BASE_TAP_DAMAGE,
     },
-    {
-      id: 'training_facility_1',
-      typeId: 'training_facility',
-      level: 1,
-      assignedBuilders: 0,
-      productionProgress: 0,
-      upgradeProgress: 0,
-      isUnlocked: false, // unlockWave: 3
-      evolutionTier: 1,
+    currentWave: startWave,
+    dailyRewards: {
+      lastLoginDate: null,
+      currentStreak: 0,
+      totalDaysLoggedIn: 0,
+      hasClaimedToday: false,
     },
-    {
-      id: 'weak_point_scanner_1',
-      typeId: 'weak_point_scanner',
-      level: 1,
-      assignedBuilders: 0,
-      productionProgress: 0,
-      upgradeProgress: 0,
-      isUnlocked: false, // unlockWave: 5
-      evolutionTier: 1,
+    hasCompletedOnboarding: debugEnabled && DEBUG_CONFIG.DISABLE_TUTORIAL,
+    specialEffects: {
+      lastScrapFindTime: 0,
+      waveExtensionApplied: false,
     },
-    {
-      id: 'command_center_1',
-      typeId: 'command_center',
-      level: 1,
-      assignedBuilders: 0,
-      productionProgress: 0,
-      upgradeProgress: 0,
-      isUnlocked: false, // unlockWave: 25
-      evolutionTier: 1,
-    },
-    {
-      id: 'engineering_bay_1',
-      typeId: 'engineering_bay',
-      level: 1,
-      assignedBuilders: 0,
-      productionProgress: 0,
-      upgradeProgress: 0,
-      isUnlocked: false, // unlockWave: 10
-      evolutionTier: 1,
-    },
-    {
-      id: 'shield_generator_1',
-      typeId: 'shield_generator',
-      level: 1,
-      assignedBuilders: 0,
-      productionProgress: 0,
-      upgradeProgress: 0,
-      isUnlocked: false, // unlockWave: 15
-      evolutionTier: 1,
-    },
-  ],
-  combat: {
-    isActive: false,
-    currentEnemy: null,
-    waveTimer: 0,
-    waveTimerMax: 30, // Matches BASE_WAVE_TIMER_SECONDS in progression.ts
-    autoDamagePerTick: 1,
-    burstChance: 0, // DEFAULT_BURST_CHANCE - burst only from Training Facility
-    burstMultiplier: 6, // DEFAULT_BURST_MULTIPLIER from combat.ts
-    baseTapDamage: 5, // BASE_TAP_DAMAGE from combat.ts
-  },
-  currentWave: 1,
-  dailyRewards: {
-    lastLoginDate: null,
-    currentStreak: 0,
-    totalDaysLoggedIn: 0,
-    hasClaimedToday: false,
-  },
-  hasCompletedOnboarding: false,
-  specialEffects: {
-    lastScrapFindTime: 0,
-    waveExtensionApplied: false,
-  },
-});
+  };
+};

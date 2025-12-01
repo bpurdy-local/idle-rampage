@@ -149,6 +149,7 @@ export {
   SHIELD_BONUS_PER_LEVEL,
   SHIELD_BONUS_PER_WORKER,
   SHIELD_MAX_BONUS_SECONDS,
+  EVOLUTION_COST_MULTIPLIERS,
   // Special effect constants
   SCRAP_FIND_BASE_COOLDOWN_MS,
   SCRAP_FIND_COOLDOWN_PER_LEVEL_MS,
@@ -177,6 +178,8 @@ export {
   WAVE_EXTEND_MAX_BONUS_SECONDS,
   // Building upgrade cost
   calculateUpgradeCost as calculateBuildingUpgradeCost,
+  // Building evolution cost
+  calculateEvolutionCost,
   // Engineering bay
   calculateEngineeringDiscount,
   // Shield generator

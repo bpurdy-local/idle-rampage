@@ -39,6 +39,8 @@ interface BuildingCardProps {
   onEvolve: () => void;
   onShowInfo: () => void;
   availableBuilders: number;
+  /** Total builders the player owns */
+  totalBuilders: number;
   prestigeCount: number;
   currentWave: number;
   evolutionTier: number;
@@ -48,6 +50,10 @@ interface BuildingCardProps {
   currentBuildingLevel?: number;
   /** True if evolution is available (level requirement met) */
   canEvolve?: boolean;
+  /** Cost to evolve to the next tier */
+  evolutionCost?: number;
+  /** True if player can afford evolution cost */
+  canAffordEvolution?: boolean;
   /** If true, this building doesn't use workers (static effect building) */
   noWorkers?: boolean;
   /** The building's unique typeId for role-specific display */
@@ -66,29 +72,33 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   canAffordUpgrade,
   onAssignBuilder,
   onUnassignBuilder,
-  onAssignMultiple,
-  onUnassignMultiple,
+  onAssignMultiple: _onAssignMultiple,
+  onUnassignMultiple: _onUnassignMultiple,
   onFocus,
   onUpgrade,
   onEvolve,
   onShowInfo,
   availableBuilders,
+  totalBuilders,
   prestigeCount,
   currentWave: _currentWave, // Reserved for future use
   evolutionTier,
   nextEvolutionLevel,
   currentBuildingLevel = 1,
   canEvolve = false,
+  evolutionCost = 0,
+  canAffordEvolution = true,
   noWorkers = false,
   buildingTypeId,
   specialEffectType,
 }) => {
   void _currentWave; // Suppress unused warning
+  void _onAssignMultiple; // No longer used
+  void _onUnassignMultiple; // No longer used
   const canAssign = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   const canUnassign = !noWorkers && building.assignedBuilders > 0;
-  const canAssign5 = !noWorkers && availableBuilders >= 5 && building.assignedBuilders + 5 <= buildingType.maxBuilders;
-  const canUnassign5 = !noWorkers && building.assignedBuilders >= 5;
-  const canFocus = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
+  // Focus is available if building doesn't have all workers and there are workers somewhere
+  const canFocus = !noWorkers && totalBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
 
   // Get role-appropriate output label and formatted value
   const getOutputDisplay = (): {label: string; value: string} => {
@@ -99,7 +109,7 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
         return {label: 'Auto DPS', value: formatNumber(production)};
       case 'training_facility':
         // production is a decimal (e.g., 0.19), multiply by 100 for flat damage bonus
-        return {label: 'Tap Bonus', value: `+${formatNumber(production * 100)}`};
+        return {label: 'Tap Bonus', value: `+${formatNumber(Math.floor(production * 100))}`};
       case 'weak_point_scanner': {
         // Show weak point damage multiplier instead of meaningless production value
         const wpMultiplier = calculateWeakPointDamageMultiplier(
@@ -115,6 +125,9 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
       case 'engineering_bay':
         // production is already the percentage (e.g., 0.10 for 10%)
         return {label: 'Discount', value: `-${Math.round(production * 100)}%`};
+      case 'shield_generator':
+        // production is the bonus seconds added to wave timer
+        return {label: 'Timer Bonus', value: `+${production.toFixed(1)}s`};
       default:
         return {label: 'Output', value: `${formatNumber(production)}/s`};
     }
@@ -182,16 +195,12 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   // Refs to track latest enabled states for hold-to-repeat
   const canAssignRef = useRef(canAssign);
   const canUnassignRef = useRef(canUnassign);
-  const canAssign5Ref = useRef(canAssign5);
-  const canUnassign5Ref = useRef(canUnassign5);
   const canAffordUpgradeRef = useRef(canAffordUpgrade);
 
   // Keep refs in sync with latest values
   useEffect(() => {
     canAssignRef.current = canAssign;
     canUnassignRef.current = canUnassign;
-    canAssign5Ref.current = canAssign5;
-    canUnassign5Ref.current = canUnassign5;
     canAffordUpgradeRef.current = canAffordUpgrade;
   });
 
@@ -201,8 +210,6 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
 
   const minusBtnScale = useSharedValue(1);
   const plusBtnScale = useSharedValue(1);
-  const minus5BtnScale = useSharedValue(1);
-  const plus5BtnScale = useSharedValue(1);
   const focusBtnScale = useSharedValue(1);
   const upgradeBtnScale = useSharedValue(1);
 
@@ -240,6 +247,11 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   useEffect(() => {
     return () => clearHoldTimers();
   }, [clearHoldTimers]);
+
+  // Clear hold timers when evolve state changes (prevents upgrade from firing when evolve button appears)
+  useEffect(() => {
+    clearHoldTimers();
+  }, [canEvolve, clearHoldTimers]);
 
   const getRoleColor = () => {
     switch (buildingType.role) {
@@ -296,14 +308,6 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
 
   const plusBtnStyle = useAnimatedStyle(() => ({
     transform: [{scale: plusBtnScale.value}],
-  }));
-
-  const minus5BtnStyle = useAnimatedStyle(() => ({
-    transform: [{scale: minus5BtnScale.value}],
-  }));
-
-  const plus5BtnStyle = useAnimatedStyle(() => ({
-    transform: [{scale: plus5BtnScale.value}],
   }));
 
   const focusBtnStyle = useAnimatedStyle(() => ({
@@ -385,11 +389,6 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
         {!noWorkers && (
           <View style={styles.builderActions}>
             <AnimatedPressable
-              style={[styles.builderBtnSmall, !canUnassign5 && styles.btnDisabled, minus5BtnStyle]}
-              {...createHoldablePressHandler(minus5BtnScale, () => onUnassignMultiple(5), () => canUnassign5Ref.current)}>
-              <Text style={styles.builderBtnTextSmall}>-5</Text>
-            </AnimatedPressable>
-            <AnimatedPressable
               style={[styles.builderBtn, !canUnassign && styles.btnDisabled, minusBtnStyle]}
               {...createHoldablePressHandler(minusBtnScale, onUnassignBuilder, () => canUnassignRef.current)}>
               <Text style={styles.builderBtnText}>-</Text>
@@ -401,23 +400,21 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
               <Text style={styles.builderBtnText}>+</Text>
             </AnimatedPressable>
             <AnimatedPressable
-              style={[styles.builderBtnSmall, !canAssign5 && styles.btnDisabled, plus5BtnStyle]}
-              {...createHoldablePressHandler(plus5BtnScale, () => onAssignMultiple(5), () => canAssign5Ref.current)}>
-              <Text style={styles.builderBtnTextSmall}>+5</Text>
-            </AnimatedPressable>
-            <AnimatedPressable
               style={[styles.focusBtn, !canFocus && styles.btnDisabled, focusBtnStyle]}
               onPress={canFocus ? onFocus : undefined}>
-              <Text style={styles.focusBtnText}>ALL</Text>
+              <Text style={styles.focusBtnText}>FOCUS</Text>
             </AnimatedPressable>
           </View>
         )}
 
         {canEvolve ? (
           <TouchableOpacity
-            style={styles.evolveBtn}
-            onPress={onEvolve}>
-            <Text style={styles.evolveBtnText}>Evolve!</Text>
+            style={[styles.evolveBtn, !canAffordEvolution && styles.evolveBtnDisabled]}
+            onPress={canAffordEvolution ? onEvolve : undefined}
+            activeOpacity={0.7}>
+            <Text style={styles.evolveBtnText}>
+              Evolve ({formatNumber(evolutionCost)})
+            </Text>
           </TouchableOpacity>
         ) : (
           <AnimatedPressable
@@ -553,21 +550,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   builderBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#2196F3',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  builderBtnSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#1976D2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 2,
   },
   focusBtn: {
     paddingHorizontal: 8,
@@ -583,12 +571,7 @@ const styles = StyleSheet.create({
   },
   builderBtnText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  builderBtnTextSmall: {
-    color: '#fff',
-    fontSize: 11,
+    fontSize: 18,
     fontWeight: '700',
   },
   focusBtnText: {
@@ -628,5 +611,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  evolveBtnDisabled: {
+    backgroundColor: '#4a235a',
+    borderColor: '#666',
   },
 });

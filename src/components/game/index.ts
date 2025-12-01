@@ -21,7 +21,6 @@ export {WeakPointOverlay, checkWeakPointHit, getWeakPointDamageMultiplier} from 
 export type {WeakPoint} from './WeakPointOverlay';
 export {SettingsModal} from './SettingsModal';
 export {ScavengersDepot} from './ScavengersDepot';
-export {BuildingEvolutionTooltip} from './TutorialTooltip';
 export {OnboardingTutorial} from './OnboardingTutorial';
 export {SpecialEffectNotification} from './SpecialEffectNotification';
 export type {SpecialEffectNotificationData} from './SpecialEffectNotification';

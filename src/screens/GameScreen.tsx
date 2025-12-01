@@ -28,7 +28,6 @@ import {
   ResourcePopup,
   DamagePopupManager,
   MilestonePopup,
-  BuildingEvolutionTooltip,
   SettingsModal,
   ScavengersDepot,
   WeakPointOverlay,
@@ -53,7 +52,6 @@ import {
   calculateEngineeringDiscount,
   getMaxTotalBuilders,
 } from '../data/buildings';
-import {BuildingEvolutionTier} from '../models/Building';
 import {PRESTIGE_TIERS, PrestigeTier} from '../data/prestigeMilestones';
 import {BuildingType, calculateUpgradeCost, calculateProduction} from '../models/Building';
 import {ProductionSystem} from '../systems/ProductionSystem';
@@ -63,7 +61,7 @@ import {PrestigeSystem} from '../systems/PrestigeSystem';
 import {SpecialEffectsSystem} from '../systems/SpecialEffectsSystem';
 import {DEBUG_CONFIG} from '../data/debugConfig';
 import {saveService} from '../services/SaveService';
-import {TAP_COOLDOWN_MS, calculateCriticalWeaknessChance, CRITICAL_WEAKNESS_BONUS_MULTIPLIER} from '../data/formulas';
+import {TAP_COOLDOWN_MS, calculateCriticalWeaknessChance, CRITICAL_WEAKNESS_BONUS_MULTIPLIER, calculateEvolutionCost, BASE_TAP_DAMAGE} from '../data/formulas';
 
 export const GameScreen: React.FC = () => {
   const [showPrestige, setShowPrestige] = useState(false);
@@ -77,11 +75,6 @@ export const GameScreen: React.FC = () => {
   } | null>(null);
   const [selectedBuildingInfo, setSelectedBuildingInfo] = useState<BuildingType | null>(null);
   const [milestoneUnlocked, setMilestoneUnlocked] = useState<PrestigeTier | null>(null);
-  const [buildingEvolution, setBuildingEvolution] = useState<{
-    buildingId: string;
-    newTier: BuildingEvolutionTier;
-    isNewUnlock: boolean;
-  } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [weakPoints, setWeakPoints] = useState<WeakPoint[]>([]);
@@ -333,22 +326,6 @@ export const GameScreen: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Listen for building evolution events (includes new unlocks at tier 1)
-  useEffect(() => {
-    const subscription = eventBus.on<{buildingId: string; newTier: BuildingEvolutionTier; isNewUnlock?: boolean}>(
-      GameEvents.BUILDING_EVOLVED,
-      (data) => {
-        setBuildingEvolution({
-          buildingId: data.buildingId,
-          newTier: data.newTier,
-          isNewUnlock: data.isNewUnlock ?? false,
-        });
-      },
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   // Handle collecting offline earnings
   const handleCollectOfflineEarnings = useCallback(() => {
     setShowOfflineEarnings(false);
@@ -442,7 +419,7 @@ export const GameScreen: React.FC = () => {
 
       // Calculate base tap damage with Training Ground bonus
       const trainingBonus = combatSystem.calculateTapDamageBonus(currentBuildings, totalWorkersOwned);
-      const baseTapDamage = 10 + trainingBonus;
+      const baseTapDamage = BASE_TAP_DAMAGE + trainingBonus;
       const tapTierMultiplier = PRESTIGE_TIERS[currentPlayer.buildingTier]?.multiplier ?? 1;
 
       const debugTapDamageMultiplier = DEBUG_CONFIG.ENABLED ? DEBUG_CONFIG.DAMAGE_MULTIPLIER : 1;
@@ -470,10 +447,12 @@ export const GameScreen: React.FC = () => {
         },
       );
 
-      // Apply weak point bonus as ADDITIVE damage (you deal normal damage + bonus)
-      // weakPointMultiplier is the bonus multiplier (e.g., 1.5x means +50% bonus damage)
+      // Apply weak point bonus as INDEPENDENT additive damage
+      // Weak point bonus is calculated from RAW base damage (not training-boosted damage)
+      // This prevents Training Ground from compounding with Weak Point Scanner
       const baseDamageWithBurst = tapDamage * burst.multiplier;
-      const weakPointBonusDamage = hitWeakPoint ? baseDamageWithBurst * (weakPointMultiplier - 1) : 0;
+      const rawBaseDamage = BASE_TAP_DAMAGE * tapTierMultiplier * currentPrestigeBonuses.tapPowerMultiplier * burst.multiplier;
+      const weakPointBonusDamage = hitWeakPoint ? rawBaseDamage * (weakPointMultiplier - 1) : 0;
       const finalDamage = baseDamageWithBurst + weakPointBonusDamage;
       state.damageEnemy(finalDamage);
 
@@ -731,12 +710,16 @@ export const GameScreen: React.FC = () => {
             if (!tier) return null;
 
             const buildingType = toBuildingType(evolvableBuilding, tier);
-            const nextTier = getNextEvolutionTier(evolvableBuilding, building.level);
+            const nextTier = getNextEvolutionTier(evolvableBuilding, building.evolutionTier);
 
             // Check if evolution is available (building level meets next tier requirement)
             const canEvolve = nextTier !== null &&
               nextTier.unlockLevel !== undefined &&
               building.level >= nextTier.unlockLevel;
+
+            // Calculate evolution cost if next tier exists
+            const evolutionCost = nextTier ? calculateEvolutionCost(nextTier.baseCost, nextTier.tier) : 0;
+            const canAffordEvolution = player.scrap >= evolutionCost;
 
             const waveBonus = productionSystem.calculateWaveBonus(currentWave);
             // Use the appropriate prestige multiplier based on building role
@@ -770,6 +753,7 @@ export const GameScreen: React.FC = () => {
                 upgradeCost={upgradeCost}
                 canAffordUpgrade={player.scrap >= upgradeCost}
                 availableBuilders={player.builders.available}
+                totalBuilders={player.builders.total}
                 onAssignBuilder={() => handleAssignBuilder(building.id)}
                 onUnassignBuilder={() => handleUnassignBuilder(building.id)}
                 onAssignMultiple={(count) => handleAssignMultiple(building.id, count)}
@@ -784,6 +768,8 @@ export const GameScreen: React.FC = () => {
                 nextEvolutionLevel={nextTier?.unlockLevel}
                 currentBuildingLevel={building.level}
                 canEvolve={canEvolve}
+                evolutionCost={evolutionCost}
+                canAffordEvolution={canAffordEvolution}
                 noWorkers={evolvableBuilding.noWorkers}
               />
             );
@@ -853,13 +839,6 @@ export const GameScreen: React.FC = () => {
         visible={milestoneUnlocked !== null}
         tier={milestoneUnlocked}
         onDismiss={() => setMilestoneUnlocked(null)}
-      />
-
-      <BuildingEvolutionTooltip
-        visible={buildingEvolution !== null}
-        newTier={buildingEvolution?.newTier ?? null}
-        isNewUnlock={buildingEvolution?.isNewUnlock ?? false}
-        onDismiss={() => setBuildingEvolution(null)}
       />
 
       {/* Onboarding tutorial for new players */}

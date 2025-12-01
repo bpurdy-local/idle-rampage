@@ -83,7 +83,7 @@ export const DamagePopup: React.FC<DamagePopupProps> = ({data, onComplete}) => {
       pointerEvents="none">
       {data.isBurst && <Text style={styles.burstLabel}>BURST!</Text>}
       <Text style={[styles.damageText, data.isBurst && styles.burstDamageText]}>
-        {formatNumber(data.damage)}
+        {formatNumber(Math.floor(data.damage))}
       </Text>
     </Animated.View>
   );

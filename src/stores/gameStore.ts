@@ -17,6 +17,7 @@ import {
 } from '../data/buildings';
 import {getTierForPrestigeCount, wouldUnlockMilestone} from '../data/prestigeMilestones';
 import {PrestigeSystem} from '../systems/PrestigeSystem';
+import {calculateEvolutionCost} from '../data/formulas';
 
 interface GameActions {
   setScrap: (amount: number) => void;
@@ -288,7 +289,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   focusBuilding: (buildingId: string) => {
     const state = get();
-    if (state.player.builders.available <= 0) return 0;
 
     const buildingIndex = state.buildings.findIndex(b => b.id === buildingId);
     if (buildingIndex === -1) return 0;
@@ -299,15 +299,32 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const evolvableBuilding = getEvolvableBuildingById(building.typeId);
     if (!evolvableBuilding || evolvableBuilding.noWorkers) return 0;
 
-    const availableCapacity = evolvableBuilding.maxBuilders - building.assignedBuilders;
-    const actualCount = Math.min(state.player.builders.available, availableCapacity);
-    if (actualCount <= 0) return 0;
+    // Recall all workers from OTHER buildings first
+    const updatedBuildings = state.buildings.map((b, i) => {
+      if (i === buildingIndex) return b; // Don't touch target building yet
+      if (b.assignedBuilders > 0) {
+        return {...b, assignedBuilders: 0};
+      }
+      return b;
+    });
 
-    const updatedBuildings = [...state.buildings];
+    // Calculate total workers now available (recalled + already available)
+    const recalledWorkers = state.buildings.reduce((sum, b, i) => {
+      if (i === buildingIndex) return sum; // Don't count target building
+      return sum + b.assignedBuilders;
+    }, 0);
+    const totalAvailable = state.player.builders.available + recalledWorkers;
+
+    // Assign as many as possible to the target building
+    const maxCapacity = evolvableBuilding.maxBuilders;
+    const actualCount = Math.min(totalAvailable, maxCapacity);
+
     updatedBuildings[buildingIndex] = {
       ...building,
-      assignedBuilders: building.assignedBuilders + actualCount,
+      assignedBuilders: actualCount,
     };
+
+    const remainingAvailable = totalAvailable - actualCount;
 
     set({
       buildings: updatedBuildings,
@@ -315,14 +332,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ...state.player,
         builders: {
           ...state.player.builders,
-          available: state.player.builders.available - actualCount,
+          available: remainingAvailable,
         },
       },
     });
 
     eventBus.emit(GameEvents.BUILDER_ASSIGNED, {
       buildingId,
-      assigned: building.assignedBuilders + actualCount,
+      assigned: actualCount,
     });
     return actualCount;
   },
@@ -412,7 +429,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   evolveBuilding: (buildingId: string) => {
-    const buildings = get().buildings;
+    const state = get();
+    const buildings = state.buildings;
     const index = buildings.findIndex(b => b.id === buildingId);
     if (index === -1) return false;
 
@@ -432,13 +450,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const nextTier = evolvableBuilding.tiers[nextTierIndex];
     if (!nextTier) return false;
 
-    // Evolve to the next tier
+    // Calculate and check evolution cost
+    const evolutionCost = calculateEvolutionCost(nextTier.baseCost, nextTier.tier);
+    if (state.player.scrap < evolutionCost) {
+      // Can't afford evolution
+      return false;
+    }
+
+    // Deduct cost and evolve to the next tier
     const updatedBuildings = [...buildings];
     updatedBuildings[index] = {
       ...building,
       evolutionTier: nextTier.tier,
     };
-    set({buildings: updatedBuildings});
+    set({
+      buildings: updatedBuildings,
+      player: {
+        ...state.player,
+        scrap: state.player.scrap - evolutionCost,
+      },
+    });
 
     // Emit evolution event
     eventBus.emit(GameEvents.BUILDING_EVOLVED, {

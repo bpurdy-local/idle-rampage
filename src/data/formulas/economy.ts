@@ -45,6 +45,44 @@ export function calculateUpgradeCost(
   return Math.floor(baseCost * Math.pow(costMultiplier, currentLevel - 1));
 }
 
+// Alias for clarity when called from Building.ts
+export const calculateBuildingUpgradeCost = calculateUpgradeCost;
+
+// =============================================================================
+// BUILDING EVOLUTION COST FORMULAS
+// =============================================================================
+
+/**
+ * Evolution cost multiplier per tier.
+ * Higher tiers cost significantly more to evolve into.
+ */
+export const EVOLUTION_COST_MULTIPLIERS = [
+  0,    // Tier 1 - no cost (starting tier)
+  5,    // Tier 2 - 5x the next tier's base cost
+  10,   // Tier 3 - 10x the next tier's base cost
+  20,   // Tier 4 - 20x the next tier's base cost
+  50,   // Tier 5 - 50x the next tier's base cost
+];
+
+/**
+ * Calculate evolution cost to evolve a building to the next tier.
+ *
+ * Formula: nextTierBaseCost * tierMultiplier
+ *
+ * Examples:
+ * - Evolve to Tier 2 (baseCost 400): 400 * 5 = 2,000
+ * - Evolve to Tier 3 (baseCost 3000): 3000 * 10 = 30,000
+ * - Evolve to Tier 4 (baseCost 25000): 25000 * 20 = 500,000
+ * - Evolve to Tier 5 (baseCost 300000): 300000 * 50 = 15,000,000
+ */
+export function calculateEvolutionCost(
+  nextTierBaseCost: number,
+  targetTier: number,
+): number {
+  const multiplier = EVOLUTION_COST_MULTIPLIERS[targetTier - 1] ?? 1;
+  return Math.floor(nextTierBaseCost * multiplier);
+}
+
 // =============================================================================
 // ENGINEERING BAY FORMULAS
 // =============================================================================

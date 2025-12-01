@@ -14,7 +14,7 @@
 // =============================================================================
 
 /** Base tap damage before any modifiers */
-export const BASE_TAP_DAMAGE = 5;
+export const BASE_TAP_DAMAGE = 500_000;
 
 /** Minimum tap variance (80% of base) */
 export const TAP_VARIANCE_MIN = 0.8;
@@ -42,11 +42,11 @@ export const DAMAGE_SCRAP_PERCENT = 0.5;
 export const TAP_COOLDOWN_MS = 150;
 
 // Weak point configuration - workers are primary scaling factor
-export const WEAK_POINT_BASE_MULTIPLIER = 2.0;
+export const WEAK_POINT_BASE_MULTIPLIER = 1.5;
 export const WEAK_POINT_MULTIPLIER_PER_TIER = 0.5;
 export const WEAK_POINT_MULTIPLIER_PER_LEVEL = 0.02;
-export const WEAK_POINT_MULTIPLIER_PER_WORKER = 0.04;
-export const WEAK_POINT_MAX_MULTIPLIER = 6.0;
+export const WEAK_POINT_MULTIPLIER_PER_WORKER = 0.4;
+export const WEAK_POINT_MAX_MULTIPLIER = 15.0;
 
 /**
  * DAMAGE STACKING RULE:
@@ -119,12 +119,13 @@ export function checkBurstAttack(
  * Calculate weak point damage multiplier based on scanner stats.
  *
  * Formula: base + (tier - 1) * tierBonus + (level - 1) * levelBonus + workers * workerBonus
- * Workers are the PRIMARY scaling factor (0.04 per worker vs 0.02 per level)
+ * Workers are the PRIMARY scaling factor (0.08 per worker vs 0.02 per level)
  *
  * Examples:
- * - Tier 1, Level 1, 0 workers: 2.0x
- * - Tier 3, Level 10, 5 workers: 3.38x
- * - Tier 5, Level 25, 50 workers: 6.0x (capped)
+ * - Tier 1, Level 1, 0 workers: 1.5x
+ * - Tier 1, Level 1, 10 workers: 2.3x
+ * - Tier 3, Level 10, 20 workers: 4.28x
+ * - Tier 5, Level 25, 50 workers: 8.0x (capped)
  */
 export function calculateWeakPointDamageMultiplier(
   scannerTier: number,
