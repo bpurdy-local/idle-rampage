@@ -37,6 +37,7 @@ import {
   OnboardingTutorial,
   SpecialEffectNotification,
   WaveExtendFlash,
+  Wave100Victory,
 } from '../components/game';
 import {dailyRewardSystem, DailyRewardCheckResult} from '../systems/DailyRewardSystem';
 import {getScaledRewardAmount} from '../data/dailyRewards';
@@ -77,6 +78,7 @@ export const GameScreen: React.FC = () => {
   const [milestoneUnlocked, setMilestoneUnlocked] = useState<PrestigeTier | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [showWave100Victory, setShowWave100Victory] = useState(false);
   const [weakPoints, setWeakPoints] = useState<WeakPoint[]>([]);
   const [enemyDisplayBounds, setEnemyDisplayBounds] = useState<{width: number; height: number; x: number; y: number}>({
     width: 350,
@@ -197,6 +199,15 @@ export const GameScreen: React.FC = () => {
     (reward: number, isBoss: boolean) => {
       showVictory(isBoss);
       spawnResourcePopup(reward, 'scrap', SCREEN_WIDTH / 2 - 50, 180);
+
+      // Check if wave 100 was just completed (currentWave is now 101 after advancing)
+      const state = useGameStore.getState();
+      if (state.currentWave === 101) {
+        // Small delay to let victory flash show first
+        setTimeout(() => {
+          setShowWave100Victory(true);
+        }, 1500);
+      }
     },
     [spawnResourcePopup, showVictory],
   );
@@ -872,6 +883,16 @@ export const GameScreen: React.FC = () => {
         visible={showSettings}
         onClose={() => setShowSettings(false)}
         buildings={buildings}
+      />
+
+      <Wave100Victory
+        visible={showWave100Victory}
+        blueprintsEarned={prestigePreview.blueprintsEarned}
+        onPrestige={() => {
+          setShowWave100Victory(false);
+          setShowPrestige(true);
+        }}
+        onContinue={() => setShowWave100Victory(false)}
       />
 
       <Modal visible={showShop} animationType="slide">
