@@ -510,6 +510,26 @@ export const GameScreen: React.FC = () => {
     [unassignBuildersFromBuilding],
   );
 
+  const handleAssignAll = useCallback(
+    (buildingId: string) => {
+      // Assign all available (unassigned) workers to this building
+      const building = buildings.find(b => b.id === buildingId);
+      if (!building) return;
+
+      const evolvableBuilding = getEvolvableBuildingById(building.typeId);
+      if (!evolvableBuilding) return;
+
+      const maxBuilders = evolvableBuilding.maxBuilders;
+      const availableSlots = maxBuilders - building.assignedBuilders;
+      const toAssign = Math.min(player.builders.available, availableSlots);
+
+      if (toAssign > 0) {
+        assignBuildersToBuilding(buildingId, toAssign);
+      }
+    },
+    [buildings, player.builders.available, assignBuildersToBuilding],
+  );
+
   const handleFocusBuilding = useCallback(
     (buildingId: string) => {
       focusBuilding(buildingId);
@@ -758,6 +778,7 @@ export const GameScreen: React.FC = () => {
                 onUnassignBuilder={() => handleUnassignBuilder(building.id)}
                 onAssignMultiple={(count) => handleAssignMultiple(building.id, count)}
                 onUnassignMultiple={(count) => handleUnassignMultiple(building.id, count)}
+                onAssignAll={() => handleAssignAll(building.id)}
                 onFocus={() => handleFocusBuilding(building.id)}
                 onUpgrade={() => handleUpgrade(building.id)}
                 onEvolve={() => handleEvolve(building.id)}

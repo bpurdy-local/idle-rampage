@@ -34,6 +34,7 @@ interface BuildingCardProps {
   onUnassignBuilder: () => void;
   onAssignMultiple: (count: number) => void;
   onUnassignMultiple: (count: number) => void;
+  onAssignAll: () => void;
   onFocus: () => void;
   onUpgrade: () => void;
   onEvolve: () => void;
@@ -74,6 +75,7 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   onUnassignBuilder,
   onAssignMultiple: _onAssignMultiple,
   onUnassignMultiple: _onUnassignMultiple,
+  onAssignAll,
   onFocus,
   onUpgrade,
   onEvolve,
@@ -97,6 +99,8 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   void _onUnassignMultiple; // No longer used
   const canAssign = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   const canUnassign = !noWorkers && building.assignedBuilders > 0;
+  // All is available if there are unassigned workers to assign
+  const canAssignAll = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   // Focus is available if building doesn't have all workers and there are workers somewhere
   const canFocus = !noWorkers && totalBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
 
@@ -210,6 +214,7 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
 
   const minusBtnScale = useSharedValue(1);
   const plusBtnScale = useSharedValue(1);
+  const allBtnScale = useSharedValue(1);
   const focusBtnScale = useSharedValue(1);
   const upgradeBtnScale = useSharedValue(1);
 
@@ -310,6 +315,10 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
     transform: [{scale: plusBtnScale.value}],
   }));
 
+  const allBtnStyle = useAnimatedStyle(() => ({
+    transform: [{scale: allBtnScale.value}],
+  }));
+
   const focusBtnStyle = useAnimatedStyle(() => ({
     transform: [{scale: focusBtnScale.value}],
   }));
@@ -398,6 +407,11 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
               style={[styles.builderBtn, !canAssign && styles.btnDisabled, plusBtnStyle]}
               {...createHoldablePressHandler(plusBtnScale, onAssignBuilder, () => canAssignRef.current)}>
               <Text style={styles.builderBtnText}>+</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={[styles.allBtn, !canAssignAll && styles.btnDisabled, allBtnStyle]}
+              onPress={canAssignAll ? onAssignAll : undefined}>
+              <Text style={styles.allBtnText}>ALL</Text>
             </AnimatedPressable>
             <AnimatedPressable
               style={[styles.focusBtn, !canFocus && styles.btnDisabled, focusBtnStyle]}
@@ -557,10 +571,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  allBtn: {
+    paddingHorizontal: 6,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#4CAF50',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+  },
   focusBtn: {
-    paddingHorizontal: 8,
-    height: 28,
-    borderRadius: 14,
+    paddingHorizontal: 6,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#FF9800',
     alignItems: 'center',
     justifyContent: 'center',
@@ -574,9 +597,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
+  allBtnText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
+  },
   focusBtnText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
   },
   builderCount: {
@@ -601,16 +629,16 @@ const styles = StyleSheet.create({
   },
   evolveBtn: {
     backgroundColor: '#9C27B0',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 6,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#E1BEE7',
   },
   evolveBtnText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
   evolveBtnDisabled: {
     backgroundColor: '#4a235a',
