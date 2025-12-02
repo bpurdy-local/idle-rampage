@@ -32,17 +32,19 @@ interface PrestigeUpgradeItem {
 // Separate component for upgrade items to manage individual animation state
 interface UpgradeItemProps {
   upgrade: PrestigeUpgradeItem;
+  canAfford: boolean;
   onPurchase: (id: string) => void;
 }
 
-const UpgradeItem: React.FC<UpgradeItemProps> = ({upgrade, onPurchase}) => {
+const UpgradeItem: React.FC<UpgradeItemProps> = ({upgrade, canAfford, onPurchase}) => {
   const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const btnScale = useSharedValue(1);
-  const canAffordRef = useRef(upgrade.canAfford);
+  const canAffordRef = useRef(canAfford);
 
+  // Keep ref in sync with latest value
   useEffect(() => {
-    canAffordRef.current = upgrade.canAfford;
+    canAffordRef.current = canAfford;
   });
 
   const clearHoldTimers = useCallback(() => {
@@ -60,39 +62,47 @@ const UpgradeItem: React.FC<UpgradeItemProps> = ({upgrade, onPurchase}) => {
     return () => clearHoldTimers();
   }, [clearHoldTimers]);
 
+  // Store onPurchase in a ref to avoid recreating handlers
+  const onPurchaseRef = useRef(onPurchase);
+  const upgradeIdRef = useRef(upgrade.id);
+  useEffect(() => {
+    onPurchaseRef.current = onPurchase;
+    upgradeIdRef.current = upgrade.id;
+  });
+
   const btnStyle = useAnimatedStyle(() => ({
     transform: [{scale: btnScale.value}],
   }));
 
-  const handlePressIn = () => {
+  const handlePressIn = useCallback(() => {
     if (canAffordRef.current) {
       btnScale.value = withSpring(0.95, {damping: 15, stiffness: 400});
       holdTimeoutRef.current = setTimeout(() => {
         holdIntervalRef.current = setInterval(() => {
           if (canAffordRef.current) {
-            onPurchase(upgrade.id);
+            onPurchaseRef.current(upgradeIdRef.current);
           } else {
             clearHoldTimers();
           }
         }, HOLD_INTERVAL);
       }, HOLD_DELAY);
     }
-  };
+  }, [btnScale, clearHoldTimers]);
 
-  const handlePressOut = () => {
+  const handlePressOut = useCallback(() => {
     btnScale.value = withSpring(1, {damping: 15, stiffness: 400});
     clearHoldTimers();
-  };
+  }, [btnScale, clearHoldTimers]);
 
-  const handlePress = () => {
+  const handlePress = useCallback(() => {
     if (canAffordRef.current) {
       btnScale.value = withSequence(
         withTiming(0.9, {duration: 50}),
         withSpring(1, {damping: 10, stiffness: 400}),
       );
-      onPurchase(upgrade.id);
+      onPurchaseRef.current(upgradeIdRef.current);
     }
-  };
+  }, [btnScale]);
 
   return (
     <View style={styles.upgradeItem}>
@@ -107,7 +117,7 @@ const UpgradeItem: React.FC<UpgradeItemProps> = ({upgrade, onPurchase}) => {
         <AnimatedPressable
           style={[
             styles.buyBtn,
-            !upgrade.canAfford && styles.buyBtnDisabled,
+            !canAfford && styles.buyBtnDisabled,
             btnStyle,
           ]}
           onPressIn={handlePressIn}
@@ -320,6 +330,7 @@ export const PrestigePanel: React.FC<PrestigePanelProps> = ({
           <UpgradeItem
             key={upgrade.id}
             upgrade={upgrade}
+            canAfford={upgrade.canAfford}
             onPurchase={onPurchaseUpgrade}
           />
         ))}
