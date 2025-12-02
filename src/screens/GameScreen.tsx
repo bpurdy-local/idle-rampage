@@ -658,7 +658,7 @@ export const GameScreen: React.FC = () => {
 
           return (
             <WeakPointOverlay
-              isActive={isUnlocked && combat.isActive && combat.currentEnemy !== null}
+              isActive={isUnlocked && scannerBuilders >= 1 && combat.isActive && combat.currentEnemy !== null}
               scannerTier={scannerTier}
               scannerLevel={scannerLevel}
               assignedBuilders={scannerBuilders}

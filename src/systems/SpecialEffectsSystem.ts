@@ -72,6 +72,11 @@ export class SpecialEffectsSystem {
       return {triggered: false, amount: 0, cooldownMs: 0};
     }
 
+    // Special effects require at least 1 worker assigned
+    if (building.assignedBuilders < 1) {
+      return {triggered: false, amount: 0, cooldownMs: 0};
+    }
+
     const tier = building.evolutionTier;
     const cooldownMs = this.calculateScrapFindCooldown(
       building.level,
@@ -108,6 +113,11 @@ export class SpecialEffectsSystem {
   getBurstBoostFromBuilding(building: BuildingState): BurstBoostResult {
     const evolvable = getEvolvableBuildingById(building.typeId);
     if (!evolvable || !building.isUnlocked) {
+      return {bonusChance: 0};
+    }
+
+    // Special effects require at least 1 worker assigned
+    if (building.assignedBuilders < 1) {
       return {bonusChance: 0};
     }
 
@@ -167,6 +177,11 @@ export class SpecialEffectsSystem {
   ): CriticalWeaknessResult {
     const evolvable = getEvolvableBuildingById(building.typeId);
     if (!evolvable || !building.isUnlocked) {
+      return {isCritical: false, damageMultiplier: 1};
+    }
+
+    // Special effects require at least 1 worker assigned
+    if (building.assignedBuilders < 1) {
       return {isCritical: false, damageMultiplier: 1};
     }
 
@@ -239,6 +254,11 @@ export class SpecialEffectsSystem {
   ): WaveExtendResult {
     const evolvable = getEvolvableBuildingById(building.typeId);
     if (!evolvable || !building.isUnlocked) {
+      return {triggered: false, bonusSeconds: 0};
+    }
+
+    // Special effects require at least 1 worker assigned
+    if (building.assignedBuilders < 1) {
       return {triggered: false, bonusSeconds: 0};
     }
 

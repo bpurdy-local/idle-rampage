@@ -24,11 +24,11 @@ export const BOSS_HEALTH_MULTIPLIER = 2.0;
 export const BOSS_REWARD_MULTIPLIER = 4.0;
 export const BOSS_TIMER_MULTIPLIER = 1.8;
 
-// Wave reward configuration - balanced for ~2hr first prestige
-export const WAVE_REWARD_BASE_PER_WAVE = 50;
-export const WAVE_REWARD_POLYNOMIAL_EXPONENT = 1.4;
-export const WAVE_REWARD_MULTIPLIER_PER_20_WAVES = 0.2;
-export const WAVE_REWARD_MULTIPLIER_CAP = 4;
+// Wave reward configuration - aggressive scaling for faster progression
+export const WAVE_REWARD_BASE_PER_WAVE = 100;
+export const WAVE_REWARD_POLYNOMIAL_EXPONENT = 1.8;
+export const WAVE_REWARD_MULTIPLIER_PER_20_WAVES = 0.3;
+export const WAVE_REWARD_MULTIPLIER_CAP = 5;
 
 // =============================================================================
 // ENEMY SCALING FORMULAS
@@ -139,14 +139,14 @@ export function getWavesUntilBoss(currentWave: number): number {
  * Calculate wave completion bonus scrap.
  *
  * Components:
- * - Base bonus: wave * 25
- * - Polynomial scaling: wave^1.3
- * - Wave multiplier: +15% per 20 waves (capped at 3x)
+ * - Base bonus: wave * 100
+ * - Polynomial scaling: wave^1.8 (aggressive scaling)
+ * - Wave multiplier: +30% per 20 waves (capped at 5x)
  *
  * Examples:
- * - Wave 10: ~350 bonus scrap
- * - Wave 40: ~1,600 bonus scrap
- * - Wave 100: ~9,000 bonus scrap
+ * - Wave 10: ~1,100 bonus scrap
+ * - Wave 40: ~12,000 bonus scrap
+ * - Wave 100: ~160,000 bonus scrap
  */
 export function calculateWaveCompletionBonus(wave: number): number {
   const baseBonus = wave * WAVE_REWARD_BASE_PER_WAVE;

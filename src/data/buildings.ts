@@ -14,7 +14,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
   {
     id: 'scrap_works',
     role: 'production',
-    costMultiplier: 1.15, // Slightly higher cost scaling
+    costMultiplier: 1.08, // Reduced cost scaling (was 1.15)
     maxBuilders: 50,
     tiers: [
       {
@@ -23,7 +23,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         description: 'Gathers scrap from the wasteland',
         unlockWave: 3,
         baseProduction: 1,
-        baseCost: 75, // Higher starting cost
+        baseCost: 75,
         iconName: 'cog',
         color: '#8B4513',
         specialEffect: {type: 'scrap_find'},
@@ -32,9 +32,9 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         tier: 2,
         name: 'Recycler',
         description: 'Processes scrap into refined materials',
-        unlockWave: 1, // Initial unlock wave (building already unlocked)
-        unlockLevel: 10, // Evolves at level 10
-        baseProduction: 8, // 8x from tier 1
+        unlockWave: 1,
+        unlockLevel: 10,
+        baseProduction: 3, // 3x from tier 1
         baseCost: 400,
         iconName: 'recycle',
         color: '#228B22',
@@ -45,8 +45,8 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         name: 'Refinery',
         description: 'Refines materials into high-grade components',
         unlockWave: 1,
-        unlockLevel: 25, // Evolves at level 25
-        baseProduction: 40, // 5x from tier 2
+        unlockLevel: 25,
+        baseProduction: 9, // 3x from tier 2
         baseCost: 3000,
         iconName: 'fire',
         color: '#4682B4',
@@ -57,8 +57,8 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         name: 'Factory',
         description: 'Mass produces components with efficiency',
         unlockWave: 1,
-        unlockLevel: 50, // Evolves at level 50
-        baseProduction: 150, // 3.75x from tier 3
+        unlockLevel: 50,
+        baseProduction: 27, // 3x from tier 3
         baseCost: 25000,
         iconName: 'industry',
         color: '#9932CC',
@@ -69,8 +69,8 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         name: 'Megaplex',
         description: 'Ultimate production facility',
         unlockWave: 1,
-        unlockLevel: 100, // Evolves at level 100
-        baseProduction: 500, // 3.3x from tier 4
+        unlockLevel: 100,
+        baseProduction: 81, // 3x from tier 4
         baseCost: 300000,
         iconName: 'city',
         color: '#FFD700',
@@ -81,7 +81,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
   {
     id: 'weak_point_scanner',
     role: 'combat',
-    costMultiplier: 1.16,
+    costMultiplier: 1.08, // Reduced cost scaling (was 1.16)
     maxBuilders: 50,
     tiers: [
       {
@@ -98,10 +98,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 2,
         name: 'Vulnerability Detector',
-        description: 'More weak points, 4x tap damage',
+        description: 'More weak points, 6x tap damage',
         unlockWave: 5,
         unlockLevel: 10,
-        baseProduction: 3.0, // 4x damage multiplier base (2x improvement)
+        baseProduction: 3.0, // 3x from tier 1
         baseCost: 1200,
         iconName: 'bullseye',
         color: '#20B2AA',
@@ -110,10 +110,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 3,
         name: 'Targeting Array',
-        description: 'Faster weak points, 8x tap damage',
+        description: 'Faster weak points, 18x tap damage',
         unlockWave: 5,
         unlockLevel: 25,
-        baseProduction: 7.0, // 8x damage multiplier base (2x improvement)
+        baseProduction: 9.0, // 3x from tier 2
         baseCost: 8000,
         iconName: 'satellite-dish',
         color: '#4682B4',
@@ -122,10 +122,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 4,
         name: 'Neural Analyzer',
-        description: 'Larger weak points, 15x tap damage',
+        description: 'Larger weak points, 54x tap damage',
         unlockWave: 5,
         unlockLevel: 50,
-        baseProduction: 14.0, // 15x damage multiplier base (1.9x improvement)
+        baseProduction: 27.0, // 3x from tier 3
         baseCost: 60000,
         iconName: 'brain',
         color: '#9370DB',
@@ -134,10 +134,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 5,
         name: 'Quantum Scanner',
-        description: 'Maximum weak points, 25x tap damage',
+        description: 'Maximum weak points, 162x tap damage',
         unlockWave: 5,
         unlockLevel: 100,
-        baseProduction: 24.0, // 25x damage multiplier base (1.7x improvement)
+        baseProduction: 81.0, // 3x from tier 4
         baseCost: 500000,
         iconName: 'atom',
         color: '#FF1493',
@@ -148,7 +148,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
   {
     id: 'training_facility',
     role: 'combat',
-    costMultiplier: 1.16,
+    costMultiplier: 1.08, // Reduced cost scaling (was 1.16)
     maxBuilders: 50,
     tiers: [
       {
@@ -168,7 +168,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         description: '+15% tap damage bonus per effective worker',
         unlockWave: 1,
         unlockLevel: 10,
-        baseProduction: 0.15, // 15% bonus per effective worker (3x improvement)
+        baseProduction: 0.15, // 3x from tier 1
         baseCost: 1000,
         iconName: 'graduation-cap',
         color: '#20B2AA',
@@ -177,10 +177,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 3,
         name: 'Elite Barracks',
-        description: '+35% tap damage bonus per effective worker',
+        description: '+45% tap damage bonus per effective worker',
         unlockWave: 1,
         unlockLevel: 25,
-        baseProduction: 0.35, // 35% bonus per effective worker (2.3x improvement)
+        baseProduction: 0.45, // 3x from tier 2
         baseCost: 7000,
         iconName: 'medal',
         color: '#DAA520',
@@ -189,10 +189,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 4,
         name: 'War College',
-        description: '+75% tap damage bonus per effective worker',
+        description: '+135% tap damage bonus per effective worker',
         unlockWave: 1,
         unlockLevel: 50,
-        baseProduction: 0.75, // 75% bonus per effective worker (2.1x improvement)
+        baseProduction: 1.35, // 3x from tier 3
         baseCost: 55000,
         iconName: 'user-graduate',
         color: '#8B008B',
@@ -201,10 +201,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 5,
         name: 'Champion Arena',
-        description: '+150% tap damage bonus per effective worker',
+        description: '+405% tap damage bonus per effective worker',
         unlockWave: 1,
         unlockLevel: 100,
-        baseProduction: 1.50, // 150% bonus per effective worker (2x improvement)
+        baseProduction: 4.05, // 3x from tier 4
         baseCost: 550000,
         iconName: 'trophy',
         color: '#FFD700',
@@ -215,7 +215,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
   {
     id: 'command_center',
     role: 'utility',
-    costMultiplier: 1.18,
+    costMultiplier: 1.10, // Reduced cost scaling (was 1.18)
     maxBuilders: 20,
     tiers: [
       {
@@ -231,10 +231,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 2,
         name: 'Command Center',
-        description: '50% boost to all production (+1% per level, +1% per worker)',
+        description: '60% boost to all production (+1% per level, +1% per worker)',
         unlockWave: 20,
         unlockLevel: 10,
-        baseProduction: 0.50, // 50% base boost (2.5x improvement)
+        baseProduction: 0.60, // 3x from tier 1
         baseCost: 30000,
         iconName: 'broadcast-tower',
         color: '#FFD700',
@@ -242,10 +242,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 3,
         name: 'War Room',
-        description: '100% boost to all production (+1% per level, +1% per worker)',
+        description: '180% boost to all production (+1% per level, +1% per worker)',
         unlockWave: 20,
         unlockLevel: 25,
-        baseProduction: 1.00, // 100% base boost (2x improvement)
+        baseProduction: 1.80, // 3x from tier 2
         baseCost: 200000,
         iconName: 'chess-rook',
         color: '#E6E6FA',
@@ -253,10 +253,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 4,
         name: 'Citadel',
-        description: '200% boost to all production (MAX)',
+        description: '540% boost to all production (MAX)',
         unlockWave: 20,
         unlockLevel: 50,
-        baseProduction: 2.00, // 200% base boost (2x improvement)
+        baseProduction: 5.40, // 3x from tier 3
         baseCost: 1500000,
         iconName: 'crown',
         color: '#FF4500',
@@ -266,15 +266,15 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
   {
     id: 'engineering_bay',
     role: 'utility',
-    costMultiplier: 1.17,
+    costMultiplier: 1.10, // Reduced cost scaling (was 1.17)
     maxBuilders: 15,
     tiers: [
       {
         tier: 1,
         name: 'Engineering Bay',
-        description: '15% upgrade cost reduction (+1% per level, +1% per worker)',
+        description: '10% upgrade cost reduction (+1% per level, +1% per worker)',
         unlockWave: 20,
-        baseProduction: 0.15, // 15% base reduction
+        baseProduction: 0.10, // 10% base reduction
         baseCost: 800,
         iconName: 'wrench',
         color: '#4682B4',
@@ -285,7 +285,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         description: '30% upgrade cost reduction (+1% per level, +1% per worker)',
         unlockWave: 10,
         unlockLevel: 10,
-        baseProduction: 0.30, // 30% base reduction (2x improvement)
+        baseProduction: 0.30, // 3x from tier 1
         baseCost: 5000,
         iconName: 'flask',
         color: '#5F9EA0',
@@ -293,10 +293,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 3,
         name: 'Innovation Hub',
-        description: '45% upgrade cost reduction (+1% per level, +1% per worker)',
+        description: '90% upgrade cost reduction (+1% per level, +1% per worker)',
         unlockWave: 10,
         unlockLevel: 25,
-        baseProduction: 0.45, // 45% base reduction (1.5x improvement)
+        baseProduction: 0.90, // 3x from tier 2 (capped at 50% in actual formula)
         baseCost: 35000,
         iconName: 'lightbulb',
         color: '#00CED1',
@@ -304,10 +304,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 4,
         name: 'Tech Nexus',
-        description: '60% upgrade cost reduction (+1% per level, +1% per worker)',
+        description: 'MAX upgrade cost reduction (50% cap)',
         unlockWave: 10,
         unlockLevel: 50,
-        baseProduction: 0.60, // 60% base reduction (1.33x improvement)
+        baseProduction: 2.70, // 3x from tier 3 (capped at 50%)
         baseCost: 250000,
         iconName: 'microchip',
         color: '#1E90FF',
@@ -315,10 +315,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 5,
         name: 'Singularity Core',
-        description: '75% upgrade cost reduction (MAX)',
+        description: 'MAX upgrade cost reduction (50% cap)',
         unlockWave: 10,
         unlockLevel: 100,
-        baseProduction: 0.75, // 75% base reduction - max cap reached!
+        baseProduction: 8.10, // 3x from tier 4 (capped at 50%)
         baseCost: 1800000,
         iconName: 'atom',
         color: '#9400D3',
@@ -328,15 +328,15 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
   {
     id: 'shield_generator',
     role: 'utility',
-    costMultiplier: 1.18,
+    costMultiplier: 1.10, // Reduced cost scaling (was 1.18)
     maxBuilders: 50,
     tiers: [
       {
         tier: 1,
         name: 'Shield Generator',
-        description: 'Adds +8 seconds to wave timer',
+        description: 'Adds +5 seconds to wave timer',
         unlockWave: 10,
-        baseProduction: 8,
+        baseProduction: 5,
         baseCost: 1500,
         iconName: 'shield-alt',
         color: '#4169E1',
@@ -348,7 +348,7 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
         description: 'Adds +15 seconds to wave timer',
         unlockWave: 15,
         unlockLevel: 10,
-        baseProduction: 15,
+        baseProduction: 15, // 3x from tier 1
         baseCost: 12000,
         iconName: 'shield-virus',
         color: '#6495ED',
@@ -357,10 +357,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 3,
         name: 'Force Field Array',
-        description: 'Adds +25 seconds to wave timer',
+        description: 'Adds +45 seconds to wave timer',
         unlockWave: 15,
         unlockLevel: 25,
-        baseProduction: 25,
+        baseProduction: 45, // 3x from tier 2 (capped at 30s in formula)
         baseCost: 90000,
         iconName: 'circle-notch',
         color: '#00BFFF',
@@ -369,10 +369,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 4,
         name: 'Quantum Barrier',
-        description: 'Adds +40 seconds to wave timer',
+        description: 'Adds +MAX seconds to wave timer (30s cap)',
         unlockWave: 15,
         unlockLevel: 50,
-        baseProduction: 40,
+        baseProduction: 135, // 3x from tier 3 (capped at 30s)
         baseCost: 700000,
         iconName: 'atom',
         color: '#7B68EE',
