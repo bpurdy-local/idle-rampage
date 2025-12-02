@@ -14,7 +14,8 @@
 // =============================================================================
 
 /** Base tap damage before any modifiers */
-export const BASE_TAP_DAMAGE = 8;
+// export const BASE_TAP_DAMAGE = 15;
+export const BASE_TAP_DAMAGE = 800_000_000;
 
 /** Minimum tap variance (80% of base) */
 export const TAP_VARIANCE_MIN = 0.8;

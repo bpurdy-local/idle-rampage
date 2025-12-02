@@ -1,9 +1,22 @@
-import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView} from 'react-native';
+import React, {useRef, useEffect, useCallback} from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Pressable} from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import {Card} from '../common/Card';
 import {Button} from '../common/Button';
 import {ProgressBar} from '../common/ProgressBar';
 import {formatNumber} from '../../utils/formatters';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+// Hold-to-repeat constants
+const HOLD_DELAY = 300; // ms before repeat starts
+const HOLD_INTERVAL = 80; // ms between repeats
 
 interface PrestigeUpgradeItem {
   id: string;
@@ -15,6 +28,102 @@ interface PrestigeUpgradeItem {
   canAfford: boolean;
   currentEffect: number;
 }
+
+// Separate component for upgrade items to manage individual animation state
+interface UpgradeItemProps {
+  upgrade: PrestigeUpgradeItem;
+  onPurchase: (id: string) => void;
+}
+
+const UpgradeItem: React.FC<UpgradeItemProps> = ({upgrade, onPurchase}) => {
+  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const btnScale = useSharedValue(1);
+  const canAffordRef = useRef(upgrade.canAfford);
+
+  useEffect(() => {
+    canAffordRef.current = upgrade.canAfford;
+  });
+
+  const clearHoldTimers = useCallback(() => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => clearHoldTimers();
+  }, [clearHoldTimers]);
+
+  const btnStyle = useAnimatedStyle(() => ({
+    transform: [{scale: btnScale.value}],
+  }));
+
+  const handlePressIn = () => {
+    if (canAffordRef.current) {
+      btnScale.value = withSpring(0.95, {damping: 15, stiffness: 400});
+      holdTimeoutRef.current = setTimeout(() => {
+        holdIntervalRef.current = setInterval(() => {
+          if (canAffordRef.current) {
+            onPurchase(upgrade.id);
+          } else {
+            clearHoldTimers();
+          }
+        }, HOLD_INTERVAL);
+      }, HOLD_DELAY);
+    }
+  };
+
+  const handlePressOut = () => {
+    btnScale.value = withSpring(1, {damping: 15, stiffness: 400});
+    clearHoldTimers();
+  };
+
+  const handlePress = () => {
+    if (canAffordRef.current) {
+      btnScale.value = withSequence(
+        withTiming(0.9, {duration: 50}),
+        withSpring(1, {damping: 10, stiffness: 400}),
+      );
+      onPurchase(upgrade.id);
+    }
+  };
+
+  return (
+    <View style={styles.upgradeItem}>
+      <View style={styles.upgradeInfo}>
+        <Text style={styles.upgradeName}>{upgrade.name}</Text>
+        <Text style={styles.upgradeLevel}>
+          Lv.{upgrade.currentLevel}/{upgrade.maxLevel}
+        </Text>
+      </View>
+      <Text style={styles.upgradeDesc}>{upgrade.description}</Text>
+      {upgrade.nextCost !== null && (
+        <AnimatedPressable
+          style={[
+            styles.buyBtn,
+            !upgrade.canAfford && styles.buyBtnDisabled,
+            btnStyle,
+          ]}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          onPress={handlePress}>
+          <Text style={styles.buyBtnText}>
+            {formatNumber(upgrade.nextCost)} BP
+          </Text>
+        </AnimatedPressable>
+      )}
+      {upgrade.nextCost === null && (
+        <Text style={styles.maxedText}>MAXED</Text>
+      )}
+    </View>
+  );
+};
 
 interface PrestigePanelProps {
   blueprints: number;
@@ -53,6 +162,77 @@ export const PrestigePanel: React.FC<PrestigePanelProps> = ({
   onClose,
 }) => {
   const isAtMaxBuilders = totalBuilders >= maxBuilders;
+
+  // Hold-to-repeat state
+  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Button scale animations
+  const builderBtnScale = useSharedValue(1);
+
+  // Refs to track latest enabled states for hold-to-repeat
+  const canAffordBuilderRef = useRef(canAffordBuilder);
+
+  // Keep refs in sync with latest values
+  useEffect(() => {
+    canAffordBuilderRef.current = canAffordBuilder;
+  });
+
+  const clearHoldTimers = useCallback(() => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => clearHoldTimers();
+  }, [clearHoldTimers]);
+
+  const createHoldablePressHandler = (
+    scale: Animated.SharedValue<number>,
+    action: () => void,
+    isEnabled: () => boolean,
+  ) => ({
+    onPressIn: () => {
+      if (isEnabled()) {
+        scale.value = withSpring(0.95, {damping: 15, stiffness: 400});
+        // Start hold-to-repeat after delay
+        holdTimeoutRef.current = setTimeout(() => {
+          holdIntervalRef.current = setInterval(() => {
+            // Re-check if action is still enabled before each repeat
+            if (isEnabled()) {
+              action();
+            } else {
+              clearHoldTimers();
+            }
+          }, HOLD_INTERVAL);
+        }, HOLD_DELAY);
+      }
+    },
+    onPressOut: () => {
+      scale.value = withSpring(1, {damping: 15, stiffness: 400});
+      clearHoldTimers();
+    },
+    onPress: () => {
+      if (isEnabled()) {
+        scale.value = withSequence(
+          withTiming(0.9, {duration: 50}),
+          withSpring(1, {damping: 10, stiffness: 400}),
+        );
+        action();
+      }
+    },
+  });
+
+  const builderBtnStyle = useAnimatedStyle(() => ({
+    transform: [{scale: builderBtnScale.value}],
+  }));
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -116,48 +296,32 @@ export const PrestigePanel: React.FC<PrestigePanelProps> = ({
         {isAtMaxBuilders ? (
           <Text style={styles.maxedText}>MAX BUILDERS</Text>
         ) : (
-          <TouchableOpacity
+          <AnimatedPressable
             style={[
               styles.buyBtn,
               !canAffordBuilder && styles.buyBtnDisabled,
+              builderBtnStyle,
             ]}
-            onPress={onPurchaseBuilder}
-            disabled={!canAffordBuilder}>
+            {...createHoldablePressHandler(
+              builderBtnScale,
+              onPurchaseBuilder,
+              () => canAffordBuilderRef.current && !isAtMaxBuilders,
+            )}>
             <Text style={styles.buyBtnText}>
               +1 Builder for {formatNumber(builderCost)} BP
             </Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         )}
       </Card>
 
       <Text style={styles.sectionTitle}>Upgrades</Text>
       <ScrollView style={styles.upgradeList}>
         {upgrades.map(upgrade => (
-          <View key={upgrade.id} style={styles.upgradeItem}>
-            <View style={styles.upgradeInfo}>
-              <Text style={styles.upgradeName}>{upgrade.name}</Text>
-              <Text style={styles.upgradeLevel}>
-                Lv.{upgrade.currentLevel}/{upgrade.maxLevel}
-              </Text>
-            </View>
-            <Text style={styles.upgradeDesc}>{upgrade.description}</Text>
-            {upgrade.nextCost !== null && (
-              <TouchableOpacity
-                style={[
-                  styles.buyBtn,
-                  !upgrade.canAfford && styles.buyBtnDisabled,
-                ]}
-                onPress={() => onPurchaseUpgrade(upgrade.id)}
-                disabled={!upgrade.canAfford}>
-                <Text style={styles.buyBtnText}>
-                  {formatNumber(upgrade.nextCost)} BP
-                </Text>
-              </TouchableOpacity>
-            )}
-            {upgrade.nextCost === null && (
-              <Text style={styles.maxedText}>MAXED</Text>
-            )}
-          </View>
+          <UpgradeItem
+            key={upgrade.id}
+            upgrade={upgrade}
+            onPurchase={onPurchaseUpgrade}
+          />
         ))}
       </ScrollView>
     </SafeAreaView>

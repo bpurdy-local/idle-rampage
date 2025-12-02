@@ -12,11 +12,12 @@
 // CONFIGURATION CONSTANTS
 // =============================================================================
 
-// Blueprint earning - wave 100 = ~1000 blueprints
+// Blueprint earning - gradual curve to ~1000 at wave 100 (capped at 1000)
 export const BASE_BLUEPRINT_WAVE = 30;
 export const BASE_BLUEPRINTS_REWARD = 10;
-export const BLUEPRINTS_PER_WAVE_ABOVE_BASE = 5;
-export const BLUEPRINT_WAVE_SCALING = 1.05;
+export const BLUEPRINTS_PER_WAVE_ABOVE_BASE = 7;
+export const BLUEPRINT_WAVE_SCALING = 1.0195;
+export const MAX_BLUEPRINTS_PER_PRESTIGE = 1000;
 
 // Builder purchase costs (escalating tiers, max 500)
 export const BUILDER_COST_TIER_1 = 5; // Builders 1-10
@@ -63,13 +64,14 @@ export function canPrestige(waveReached: number): boolean {
  * Formula:
  * - Below wave 30: 0 blueprints
  * - Wave 30: 10 blueprints
- * - Each wave above 30: +5 * (1.05 ^ wavesAbove30)
+ * - Each wave above 30: +7 * (1.0195 ^ wavesAbove30)
+ * - Capped at 1000 blueprints (endless mode gives no extra)
  *
  * Examples:
  * - Wave 30: 10 blueprints
- * - Wave 50: ~180 blueprints
- * - Wave 75: ~500 blueprints
- * - Wave 100: ~1000 blueprints (max wave)
+ * - Wave 50: ~170 blueprints
+ * - Wave 75: ~485 blueprints
+ * - Wave 100: ~1000 blueprints (capped)
  */
 export function calculateBlueprintsEarned(waveReached: number): number {
   if (waveReached < BASE_BLUEPRINT_WAVE) return 0;
@@ -83,7 +85,7 @@ export function calculateBlueprintsEarned(waveReached: number): number {
     );
   }
 
-  return blueprints;
+  return Math.min(blueprints, MAX_BLUEPRINTS_PER_PRESTIGE);
 }
 
 // =============================================================================

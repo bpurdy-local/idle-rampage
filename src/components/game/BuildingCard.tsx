@@ -19,6 +19,7 @@ import {
   calculateCriticalWeaknessChance,
   calculateWaveExtendChance,
   calculateWeakPointDamageMultiplier,
+  calculateShieldGeneratorBonus,
   SCRAP_FIND_BASE_REWARD_PERCENT,
   SCRAP_FIND_TIER_MULTIPLIERS,
   CRITICAL_WEAKNESS_DAMAGE_MULTIPLIER,
@@ -129,9 +130,12 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
       case 'engineering_bay':
         // production is already the percentage (e.g., 0.10 for 10%)
         return {label: 'Discount', value: `-${Math.round(production * 100)}%`};
-      case 'shield_generator':
-        // production is the bonus seconds added to wave timer
-        return {label: 'Timer Bonus', value: `+${production.toFixed(1)}s`};
+      case 'shield_generator': {
+        // Use the actual shield generator formula (baseProduction is tier base bonus in seconds)
+        const tierBaseBonus = buildingType.baseProduction;
+        const shieldBonus = calculateShieldGeneratorBonus(tierBaseBonus, building.level, building.assignedBuilders);
+        return {label: 'Timer Bonus', value: `+${shieldBonus.toFixed(1)}s`};
+      }
       default:
         return {label: 'Output', value: `${formatNumber(production)}/s`};
     }

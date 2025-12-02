@@ -36,19 +36,22 @@ export const WaveExtendFlash: React.FC<WaveExtendFlashProps> = ({
       scale.value = 0.5;
 
       const flashOpacity = 0.35;
-      const flashDuration = 150;
-      const fadeDuration = 400;
+      const flashDuration = 300;
+      const holdDuration = 800;
+      const fadeDuration = 600;
 
       opacity.value = withSequence(
         withTiming(flashOpacity, {duration: flashDuration, easing: Easing.out(Easing.quad)}),
+        withTiming(flashOpacity, {duration: holdDuration}), // Hold at full opacity
         withTiming(0, {duration: fadeDuration, easing: Easing.in(Easing.quad)}, () => {
           runOnJS(onCompleteRef.current)();
         }),
       );
 
       scale.value = withSequence(
-        withTiming(1.1, {duration: 200, easing: Easing.out(Easing.back(2))}),
-        withTiming(1, {duration: 300, easing: Easing.out(Easing.quad)}),
+        withTiming(1.1, {duration: 300, easing: Easing.out(Easing.back(2))}),
+        withTiming(1.05, {duration: holdDuration}), // Hold scale
+        withTiming(1, {duration: 400, easing: Easing.out(Easing.quad)}),
       );
     } else {
       opacity.value = 0;

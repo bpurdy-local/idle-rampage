@@ -154,9 +154,9 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 1,
         name: 'Training Ground',
-        description: '+5% tap damage bonus per effective worker',
+        description: '+10% tap damage bonus per effective worker',
         unlockWave: 1,
-        baseProduction: 0.05, // 5% bonus per effective worker
+        baseProduction: 0.10, // 10% bonus per effective worker
         baseCost: 150,
         iconName: 'dumbbell',
         color: '#FF6B35',
@@ -165,10 +165,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 2,
         name: 'Combat Academy',
-        description: '+15% tap damage bonus per effective worker',
+        description: '+30% tap damage bonus per effective worker',
         unlockWave: 1,
         unlockLevel: 10,
-        baseProduction: 0.15, // 3x from tier 1
+        baseProduction: 0.30, // 3x from tier 1
         baseCost: 1000,
         iconName: 'graduation-cap',
         color: '#20B2AA',
@@ -177,10 +177,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 3,
         name: 'Elite Barracks',
-        description: '+45% tap damage bonus per effective worker',
+        description: '+90% tap damage bonus per effective worker',
         unlockWave: 1,
         unlockLevel: 25,
-        baseProduction: 0.45, // 3x from tier 2
+        baseProduction: 0.90, // 3x from tier 2
         baseCost: 7000,
         iconName: 'medal',
         color: '#DAA520',
@@ -189,10 +189,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 4,
         name: 'War College',
-        description: '+135% tap damage bonus per effective worker',
+        description: '+270% tap damage bonus per effective worker',
         unlockWave: 1,
         unlockLevel: 50,
-        baseProduction: 1.35, // 3x from tier 3
+        baseProduction: 2.70, // 3x from tier 3
         baseCost: 55000,
         iconName: 'user-graduate',
         color: '#8B008B',
@@ -201,10 +201,10 @@ export const EVOLVABLE_BUILDINGS: EvolvableBuilding[] = [
       {
         tier: 5,
         name: 'Champion Arena',
-        description: '+405% tap damage bonus per effective worker',
+        description: '+810% tap damage bonus per effective worker',
         unlockWave: 1,
         unlockLevel: 100,
-        baseProduction: 4.05, // 3x from tier 4
+        baseProduction: 8.10, // 3x from tier 4
         baseCost: 550000,
         iconName: 'trophy',
         color: '#FFD700',

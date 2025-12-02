@@ -196,14 +196,13 @@ export const GameScreen: React.FC = () => {
 
   // Game tick callbacks
   const handleWaveComplete = useCallback(
-    (reward: number, isBoss: boolean) => {
+    (reward: number, isBoss: boolean, waveCompleted: number) => {
       showVictory(isBoss);
       spawnResourcePopup(reward, 'scrap', SCREEN_WIDTH / 2 - 50, 180);
 
-      // Check if wave 100 was just completed (currentWave is now 101 after advancing)
-      const state = useGameStore.getState();
-      if (state.currentWave === 101) {
-        // Small delay to let victory flash show first
+      // Check if wave 100 was just completed
+      if (waveCompleted === 100) {
+        // Delay to let victory flash show first
         setTimeout(() => {
           setShowWave100Victory(true);
         }, 1500);

@@ -6,12 +6,12 @@ export const ENEMY_TIERS: EnemyTier[] = [
     name: 'Scrap Bot',
     minWave: 1,
     maxWave: 12,
-    // Wave 1: ~50 taps at 8 dmg = 400 HP, ~7.5s pure tapping
-    // Wave 12: 400 * 1.55^11 = ~35,000 HP - requires building upgrades
+    // Wave 1: ~27 taps at 15 dmg = 400 HP
+    // Wave 12: 400 * 1.25^11 = ~5,400 HP
     baseHealth: 400,
-    healthMultiplierPerWave: 1.55,
+    healthMultiplierPerWave: 1.25,
     baseReward: 20,
-    rewardMultiplierPerWave: 1.20,
+    rewardMultiplierPerWave: 1.18,
     color: '#8B8B8B',
     iconName: 'robot',
   },
@@ -21,10 +21,11 @@ export const ENEMY_TIERS: EnemyTier[] = [
     minWave: 13,
     maxWave: 28,
     // Continues from scrap_bot - player should have ~level 5-10 buildings
-    baseHealth: 50000,
-    healthMultiplierPerWave: 1.45,
-    baseReward: 120,
-    rewardMultiplierPerWave: 1.16,
+    // Wave 13: 8,000 HP, Wave 28: 8,000 * 1.20^15 = ~123,000 HP
+    baseHealth: 8000,
+    healthMultiplierPerWave: 1.20,
+    baseReward: 80,
+    rewardMultiplierPerWave: 1.15,
     color: '#4169E1',
     iconName: 'plane',
   },
@@ -33,11 +34,12 @@ export const ENEMY_TIERS: EnemyTier[] = [
     name: 'Loader',
     minWave: 29,
     maxWave: 48,
-    // Mid-game wall - requires strategic building investment
-    baseHealth: 800000,
-    healthMultiplierPerWave: 1.38,
-    baseReward: 600,
-    rewardMultiplierPerWave: 1.14,
+    // Mid-game - requires strategic building investment
+    // Wave 29: 200,000 HP, Wave 48: 200,000 * 1.18^19 = ~4.5M HP
+    baseHealth: 200000,
+    healthMultiplierPerWave: 1.18,
+    baseReward: 400,
+    rewardMultiplierPerWave: 1.12,
     color: '#FF8C00',
     iconName: 'truck',
   },
@@ -47,10 +49,11 @@ export const ENEMY_TIERS: EnemyTier[] = [
     minWave: 49,
     maxWave: 72,
     // Late game - prestige bonuses start helping significantly
-    baseHealth: 15000000,
-    healthMultiplierPerWave: 1.30,
-    baseReward: 4000,
-    rewardMultiplierPerWave: 1.12,
+    // Wave 49: 6M HP, Wave 72: 6M * 1.15^23 = ~140M HP
+    baseHealth: 6000000,
+    healthMultiplierPerWave: 1.15,
+    baseReward: 2500,
+    rewardMultiplierPerWave: 1.10,
     color: '#B22222',
     iconName: 'shield',
   },
@@ -60,10 +63,11 @@ export const ENEMY_TIERS: EnemyTier[] = [
     minWave: 73,
     maxWave: 999,
     // End game - requires multiple prestiges
-    baseHealth: 300000000,
-    healthMultiplierPerWave: 1.22,
-    baseReward: 30000,
-    rewardMultiplierPerWave: 1.10,
+    // Wave 73: 200M HP, scales slower for extended play
+    baseHealth: 200000000,
+    healthMultiplierPerWave: 1.12,
+    baseReward: 15000,
+    rewardMultiplierPerWave: 1.08,
     color: '#800080',
     iconName: 'brain',
   },

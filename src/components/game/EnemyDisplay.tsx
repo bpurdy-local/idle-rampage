@@ -415,14 +415,16 @@ export const EnemyDisplay: React.FC<EnemyDisplayProps> = ({
           />
         </View>
 
-        {/* Boss warning */}
-        {!isBoss && showBossWarning && (
-          <View style={styles.bossWarning}>
-            <Text style={styles.bossWarningText}>
-              ⚠ BOSS CONTACT IN {wavesUntilBoss} WAVE{wavesUntilBoss !== 1 ? 'S' : ''}
-            </Text>
-          </View>
-        )}
+        {/* Boss warning - fixed height container to prevent layout shift */}
+        <View style={styles.bossWarningContainer}>
+          {!isBoss && showBossWarning && (
+            <View style={styles.bossWarning}>
+              <Text style={styles.bossWarningText}>
+                ⚠ BOSS CONTACT IN {wavesUntilBoss} WAVE{wavesUntilBoss !== 1 ? 'S' : ''}
+              </Text>
+            </View>
+          )}
+        </View>
 
         {/* Main enemy display */}
         <View style={styles.mainDisplay}>
@@ -657,13 +659,16 @@ const styles = StyleSheet.create({
   },
 
   // Boss warning
+  bossWarningContainer: {
+    height: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   bossWarning: {
     backgroundColor: 'rgba(139, 0, 0, 0.5)',
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 2,
-    marginBottom: 8,
-    alignSelf: 'center',
   },
   bossWarningText: {
     color: '#FFD700',

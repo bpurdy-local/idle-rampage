@@ -30,7 +30,7 @@ export interface UseGameTickOptions {
   waveManager: WaveManager;
   prestigeSystem: PrestigeSystem;
   specialEffectsSystem: SpecialEffectsSystem;
-  onWaveComplete: (reward: number, isBoss: boolean) => void;
+  onWaveComplete: (reward: number, isBoss: boolean, waveCompleted: number) => void;
   onWaveFailed: () => void;
   onLuckyDrop: (drop: DropResult) => void;
   onScrapFind?: (event: ScrapFindEvent) => void;
@@ -186,7 +186,7 @@ function handleCombatTick(
   combatSystem: CombatSystem,
   waveManager: WaveManager,
   specialEffectsSystem: SpecialEffectsSystem,
-  onWaveComplete: (reward: number, isBoss: boolean) => void,
+  onWaveComplete: (reward: number, isBoss: boolean, waveCompleted: number) => void,
   onWaveFailed: () => void,
   onLuckyDrop: (drop: DropResult) => void,
   onWaveExtend?: (event: WaveExtendEvent) => void,
@@ -261,7 +261,7 @@ function handleWaveComplete(
   prestigeBonuses: ReturnType<PrestigeSystem['calculateBonuses']>,
   waveManager: WaveManager,
   specialEffectsSystem: SpecialEffectsSystem,
-  onWaveComplete: (reward: number, isBoss: boolean) => void,
+  onWaveComplete: (reward: number, isBoss: boolean, waveCompleted: number) => void,
   onLuckyDrop: (drop: DropResult) => void,
   onWaveExtend?: (event: WaveExtendEvent) => void,
 ) {
@@ -279,7 +279,7 @@ function handleWaveComplete(
   state.addScrap(reward.totalScrap);
 
   const isBoss = combat.currentEnemy.isBoss === true;
-  onWaveComplete(reward.totalScrap, isBoss);
+  onWaveComplete(reward.totalScrap, isBoss, currentWave);
 
   // Roll for lucky drop (guaranteed for bosses)
   const dropResult = luckyDropSystem.rollForDrop(currentWave, combat.currentEnemy.reward, isBoss);
