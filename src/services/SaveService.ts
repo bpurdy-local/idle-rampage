@@ -133,8 +133,12 @@ export class SaveService {
     this.stopAutoSave();
 
     this.autoSaveInterval = setInterval(async () => {
-      const state = getState();
-      await this.save(state);
+      try {
+        const state = getState();
+        await this.save(state);
+      } catch (error) {
+        console.error('[SaveService] Auto-save failed:', error);
+      }
     }, this.AUTO_SAVE_INTERVAL_MS);
   }
 

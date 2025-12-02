@@ -26,3 +26,4 @@ export {SpecialEffectNotification} from './SpecialEffectNotification';
 export type {SpecialEffectNotificationData} from './SpecialEffectNotification';
 export {WaveExtendFlash} from './WaveExtendFlash';
 export {Wave100Victory} from './Wave100Victory';
+export {LoadingScreen} from './LoadingScreen';

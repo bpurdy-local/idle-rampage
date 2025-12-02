@@ -21,7 +21,7 @@ export const PRESTIGE_UPGRADES: PrestigeUpgradeDefinition[] = [
     baseCost: 3,
     costMultiplier: 1.22,
     baseEffect: 1.0,
-    effectPerLevel: 0.15,
+    effectPerLevel: 0.10,
     maxLevel: 20,
     iconName: 'hand-pointer',
   },

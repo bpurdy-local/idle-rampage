@@ -41,12 +41,6 @@ const STORY_ENTRIES: StoryEntry[] = [
     story: 'Your operation grows more sophisticated. The Recycler processes raw scrap into refined materials, recovering valuable alloys that would otherwise be lost. Your workers have learned to extract more from less - a crucial skill in this resource-scarce world.',
   },
   {
-    buildingId: 'salvage_yard',
-    tier: 1,
-    title: 'The Scavengers Arrive',
-    story: 'Word of your settlement spreads across the wasteland. One morning, a caravan of armored vehicles arrives at your gates - the Scavengers.\n\nThey\'re nomadic traders who brave machine-infested territories, salvaging pre-war technology and rescuing stranded survivors. Their leader offers a deal: they\'ll establish a trading post here, a "Scavenger\'s Depot," in exchange for protection.\n\nThe Depot becomes your lifeline to the wider world, offering rare resources and recruiting survivors to join your cause. Visit the golden "Depot" tab to see what they have for trade.',
-  },
-  {
     buildingId: 'scrap_works',
     tier: 3,
     title: 'The Refinery',
@@ -65,36 +59,36 @@ const STORY_ENTRIES: StoryEntry[] = [
     story: 'A testament to human determination rises from the ashes. The Megaplex is the largest production facility since the Collapse - a beacon of hope visible for miles. Inside, automated systems and human ingenuity work in harmony, producing more resources than ever thought possible.',
   },
 
-  // Turret Station storyline
+  // Weak Point Scanner storyline
   {
-    buildingId: 'turret_station',
+    buildingId: 'weak_point_scanner',
     tier: 1,
-    title: 'First Defense',
-    story: 'The robots have found you. Waves of hostile machines probe your defenses, testing for weakness. You hastily construct a Turret Bay - crude automated guns that provide continuous fire against the mechanical horde. Sleep becomes possible again.',
+    title: 'Finding the Weakness',
+    story: 'The robots seem invincible, but your engineers discover a crucial truth: every machine has vulnerable points. The Weak Point Scanner highlights these critical spots on enemy armor. Now when you strike, you strike where it matters most.',
   },
   {
-    buildingId: 'turret_station',
+    buildingId: 'weak_point_scanner',
     tier: 2,
-    title: 'Gun Emplacement',
-    story: 'Salvaged targeting systems upgrade your defenses. The Gun Emplacement tracks multiple targets simultaneously, its rapid-fire cannons shredding through lighter units. The machines adapt, sending stronger units - but so do you.',
+    title: 'Vulnerability Detected',
+    story: 'Advanced sensors penetrate deeper into machine anatomy. The Vulnerability Detector reveals hidden weak points that even the robots don\'t know they have. Your warriors learn to see opportunities where others see only steel.',
   },
   {
-    buildingId: 'turret_station',
+    buildingId: 'weak_point_scanner',
     tier: 3,
-    title: 'Weapons Lab',
-    story: 'Captured robot technology reveals secrets of their construction. Your engineers weaponize this knowledge, developing experimental armaments that exploit machine vulnerabilities. The hunters become the hunted.',
+    title: 'Target Acquired',
+    story: 'The Targeting Array processes battlefield data in real-time, predicting where weak points will appear before they manifest. Your strikes become almost precognitive - the machines cannot adapt fast enough.',
   },
   {
-    buildingId: 'turret_station',
+    buildingId: 'weak_point_scanner',
     tier: 4,
-    title: 'War Factory',
-    story: 'The War Factory churns out military-grade weaponry around the clock. Heavy artillery, missile systems, electromagnetic pulse generators - humanity\'s arsenal grows formidable. The robot incursions become less frequent; they\'re learning to fear you.',
+    title: 'Neural Infiltration',
+    story: 'The Neural Analyzer doesn\'t just scan machines - it reads their code. By predicting enemy behavior patterns, it highlights catastrophic weak points that cause chain reactions. One perfect strike can disable an entire unit.',
   },
   {
-    buildingId: 'turret_station',
+    buildingId: 'weak_point_scanner',
     tier: 5,
-    title: 'Doom Fortress',
-    story: 'The ultimate in automated destruction. The Doom Fortress bristles with weapons of terrifying power - orbital strike beacons, plasma cannons, nanite swarms. No machine survives long in its shadow. The tide of war has turned.',
+    title: 'Quantum Sight',
+    story: 'The Quantum Scanner perceives robots at a molecular level. It reveals weak points in the fabric of their construction that shouldn\'t be possible to exploit - yet your warriors do. The machines have no defense against attacks they cannot comprehend.',
   },
 
   // Training Facility storyline
@@ -102,7 +96,7 @@ const STORY_ENTRIES: StoryEntry[] = [
     buildingId: 'training_facility',
     tier: 1,
     title: 'Learning to Fight',
-    story: 'Automated turrets help, but human resilience remains your greatest weapon. The Training Ground teaches survivors to fight - how to strike machine weak points, where to aim for maximum damage. Every tap becomes more lethal.',
+    story: 'Scanning for weak points helps, but human resilience remains your greatest weapon. The Training Ground teaches survivors to fight - how to strike machine vulnerabilities, where to aim for maximum damage. Every tap becomes more lethal.',
   },
   {
     buildingId: 'training_facility',
@@ -129,36 +123,56 @@ const STORY_ENTRIES: StoryEntry[] = [
     story: 'The greatest warriors in the wasteland prove themselves in the Champion Arena. Combat tournaments forge unbreakable spirits and perfect technique. Champions trained here possess almost supernatural combat prowess.',
   },
 
-  // Salvage Yard storyline
+  // Shield Generator storyline
   {
-    buildingId: 'salvage_yard',
+    buildingId: 'shield_generator',
     tier: 1,
-    title: 'Waste Not',
-    story: 'Every fallen machine is an opportunity. The Salvage Yard systematically strips defeated robots of valuable components. What once threatened you now fuels your growth. Waste not, want not.',
+    title: 'Buying Time',
+    story: 'The machines are relentless, but your engineers devise a solution. The Shield Generator projects a protective field that slows robot advance, giving your warriors precious extra seconds to fight. Time itself becomes a weapon.',
   },
   {
-    buildingId: 'salvage_yard',
+    buildingId: 'shield_generator',
     tier: 2,
-    title: 'Reclamation Center',
-    story: 'Specialist teams now work the battlefield. The Reclamation Center coordinates salvage operations, ensuring no valuable component goes unrecovered. Even the smallest scrap finds purpose.',
+    title: 'The Barrier Rises',
+    story: 'Salvaged technology from fallen mechs powers the Barrier Projector. The strengthened shields hold back even the largest assault units, creating safe zones where your forces can regroup and counterattack.',
   },
   {
-    buildingId: 'salvage_yard',
+    buildingId: 'shield_generator',
     tier: 3,
-    title: 'Loot Processor',
-    story: 'Advanced machinery analyzes captured technology. The Loot Processor extracts maximum value from robot remains, revealing hidden caches of rare materials the machines themselves didn\'t know they carried.',
+    title: 'Force of Will',
+    story: 'The Force Field Array generates overlapping defensive layers. When one shield falters, another takes its place. Robots that once stormed through your defenses now find themselves fighting an uphill battle against time.',
   },
   {
-    buildingId: 'salvage_yard',
+    buildingId: 'shield_generator',
     tier: 4,
-    title: 'Trophy Hall',
-    story: 'A monument to victory, the Trophy Hall displays the most impressive machine kills. But it\'s more than memorial - specialized equipment extracts unique components from elite units, yielding rewards beyond measure.',
+    title: 'Quantum Defense',
+    story: 'The Quantum Barrier exists in multiple states simultaneously. Machines that breach one layer find themselves facing another. Your defenses have transcended conventional physics - victory is no longer a race against the clock.',
+  },
+
+  // Command Center storyline
+  {
+    buildingId: 'command_center',
+    tier: 1,
+    title: 'Establishing Order',
+    story: 'Scattered survivors unite under the Outpost\'s banner. For the first time since the Collapse, there\'s coordination - resources flow efficiently, workers are directed where needed most. Leadership emerges from chaos.',
   },
   {
-    buildingId: 'salvage_yard',
-    tier: 5,
-    title: 'Spoils Vault',
-    story: 'Deep within fortified walls, the Spoils Vault stores humanity\'s accumulated machine-harvested wealth. Automated sorting systems process the constant influx of spoils, ensuring nothing of value escapes notice.',
+    buildingId: 'command_center',
+    tier: 2,
+    title: 'Command Center',
+    story: 'A proper Command Center rises, complete with communication arrays and strategic displays. From here, the resistance coordinates across the wasteland. Multiple settlements link together, sharing resources and intelligence.',
+  },
+  {
+    buildingId: 'command_center',
+    tier: 3,
+    title: 'The War Room',
+    story: 'Holographic displays chart machine movements across continents. The War Room coordinates global resistance efforts - when one settlement falls, others reinforce. Humanity fights as one for the first time since the Collapse.',
+  },
+  {
+    buildingId: 'command_center',
+    tier: 4,
+    title: 'The Citadel',
+    story: 'A monument to humanity\'s resurgence. The Citadel commands respect from ally and enemy alike - a fortress of strategy and strength from which the final war will be directed. Victory is no longer a dream; it\'s an inevitability.',
   },
 
   // Engineering Bay storyline
@@ -191,32 +205,6 @@ const STORY_ENTRIES: StoryEntry[] = [
     tier: 5,
     title: 'Singularity Core',
     story: 'The pinnacle of human-machine cooperation. The Singularity Core processes data at incomprehensible speeds, designing perfect solutions to any engineering challenge. Technology that once threatened humanity now serves it.',
-  },
-
-  // Command Center storyline
-  {
-    buildingId: 'command_center',
-    tier: 1,
-    title: 'Establishing Order',
-    story: 'Scattered survivors unite under the Outpost\'s banner. For the first time since the Collapse, there\'s coordination - resources flow efficiently, workers are directed where needed most. Leadership emerges from chaos.',
-  },
-  {
-    buildingId: 'command_center',
-    tier: 2,
-    title: 'Command Center',
-    story: 'A proper Command Center rises, complete with communication arrays and strategic displays. From here, the resistance coordinates across the wasteland. Multiple settlements link together, sharing resources and intelligence.',
-  },
-  {
-    buildingId: 'command_center',
-    tier: 3,
-    title: 'The War Room',
-    story: 'Holographic displays chart machine movements across continents. The War Room coordinates global resistance efforts - when one settlement falls, others reinforce. Humanity fights as one for the first time since the Collapse.',
-  },
-  {
-    buildingId: 'command_center',
-    tier: 4,
-    title: 'The Citadel',
-    story: 'A monument to humanity\'s resurgence. The Citadel commands respect from ally and enemy alike - a fortress of strategy and strength from which the final war will be directed. Victory is no longer a dream; it\'s an inevitability.',
   },
 ];
 

@@ -32,9 +32,9 @@ export const DamagePopup: React.FC<DamagePopupProps> = ({data, onComplete}) => {
   const translateX = useSharedValue(0);
   const scale = useSharedValue(0);
 
-  const horizontalDrift = (Math.random() - 0.5) * 40;
-
+  // Run animation once on mount - dependencies intentionally omitted
   useEffect(() => {
+    const horizontalDrift = (Math.random() - 0.5) * 40;
     scale.value = withSequence(
       withTiming(1.2, {duration: 100, easing: Easing.out(Easing.quad)}),
       withTiming(1, {duration: 100}),
@@ -62,7 +62,8 @@ export const DamagePopup: React.FC<DamagePopupProps> = ({data, onComplete}) => {
         }
       },
     );
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.id]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

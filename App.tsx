@@ -1,18 +1,24 @@
 import React, {useEffect, useState} from 'react';
-import {StatusBar, View, Text, StyleSheet, ActivityIndicator} from 'react-native';
+import {StatusBar, View, Text, StyleSheet} from 'react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GameScreen} from './src/screens/GameScreen';
+import {LoadingScreen} from './src/components/game/LoadingScreen';
 import {saveService} from './src/services/SaveService';
 import {useGameStore} from './src/stores/gameStore';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadGame = async () => {
       try {
+        // Simulate loading stages for visual feedback
+        setLoadingProgress(0.2);
+
         const result = await saveService.load();
+        setLoadingProgress(0.6);
 
         if (result.success && result.gameState) {
           // Restore game state to store
@@ -27,8 +33,13 @@ function App() {
           }
         }
 
-        setIsLoading(false);
-      } catch (err) {
+        setLoadingProgress(1);
+
+        // Brief delay to show completed state
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 500);
+      } catch {
         setError('Failed to load game');
         setIsLoading(false);
       }
@@ -38,12 +49,7 @@ function App() {
   }, []);
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
+    return <LoadingScreen progress={loadingProgress} />;
   }
 
   if (error) {
@@ -63,17 +69,6 @@ function App() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#0f0f1a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#fff',
-    marginTop: 16,
-    fontSize: 16,
-  },
   errorContainer: {
     flex: 1,
     backgroundColor: '#0f0f1a',

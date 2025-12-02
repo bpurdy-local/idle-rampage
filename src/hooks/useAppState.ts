@@ -9,7 +9,7 @@ interface AppStateCallbacks {
 
 export const useAppState = ({onForeground, onBackground}: AppStateCallbacks = {}) => {
   const appState = useRef<AppStateStatus>(AppState.currentState);
-  const backgroundTime = useRef<number>(0);
+  const backgroundTime = useRef<number>(Date.now());
 
   const handleAppStateChange = useCallback(
     (nextAppState: AppStateStatus) => {
@@ -17,7 +17,8 @@ export const useAppState = ({onForeground, onBackground}: AppStateCallbacks = {}
         appState.current.match(/inactive|background/) &&
         nextAppState === 'active'
       ) {
-        const inactiveTime = Date.now() - backgroundTime.current;
+        // Ensure inactiveTime is never negative (handles clock sync edge cases)
+        const inactiveTime = Math.max(0, Date.now() - backgroundTime.current);
         eventBus.emit(GameEvents.APP_FOREGROUNDED, {inactiveTime});
         onForeground?.(inactiveTime);
       } else if (

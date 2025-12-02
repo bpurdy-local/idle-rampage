@@ -33,8 +33,6 @@ interface BuildingCardProps {
   canAffordUpgrade: boolean;
   onAssignBuilder: () => void;
   onUnassignBuilder: () => void;
-  onAssignMultiple: (count: number) => void;
-  onUnassignMultiple: (count: number) => void;
   onAssignAll: () => void;
   onFocus: () => void;
   onUpgrade: () => void;
@@ -44,7 +42,6 @@ interface BuildingCardProps {
   /** Total builders the player owns */
   totalBuilders: number;
   prestigeCount: number;
-  currentWave: number;
   evolutionTier: number;
   /** Level required to evolve to the next tier */
   nextEvolutionLevel?: number;
@@ -74,8 +71,6 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   canAffordUpgrade,
   onAssignBuilder,
   onUnassignBuilder,
-  onAssignMultiple: _onAssignMultiple,
-  onUnassignMultiple: _onUnassignMultiple,
   onAssignAll,
   onFocus,
   onUpgrade,
@@ -84,7 +79,6 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   availableBuilders,
   totalBuilders,
   prestigeCount,
-  currentWave: _currentWave, // Reserved for future use
   evolutionTier,
   nextEvolutionLevel,
   currentBuildingLevel = 1,
@@ -95,9 +89,6 @@ export const BuildingCard: React.FC<BuildingCardProps> = ({
   buildingTypeId,
   specialEffectType,
 }) => {
-  void _currentWave; // Suppress unused warning
-  void _onAssignMultiple; // No longer used
-  void _onUnassignMultiple; // No longer used
   const canAssign = !noWorkers && availableBuilders > 0 && building.assignedBuilders < buildingType.maxBuilders;
   const canUnassign = !noWorkers && building.assignedBuilders > 0;
   // All is available if there are unassigned workers to assign

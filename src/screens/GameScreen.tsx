@@ -144,7 +144,6 @@ export const GameScreen: React.FC = () => {
     assignBuilder,
     unassignBuilder,
     assignBuildersToBuilding,
-    unassignBuildersFromBuilding,
     recallAllBuilders,
     focusBuilding,
     upgradeBuilding,
@@ -249,18 +248,20 @@ export const GameScreen: React.FC = () => {
     tickRate: 100,
   });
 
-  // Auto-save
+  // Auto-save - get fresh state on each save to avoid stale closure
   useEffect(() => {
-    const state = useGameStore.getState();
-    saveService.startAutoSave(() => ({
-      player: state.player,
-      buildings: state.buildings,
-      combat: state.combat,
-      currentWave: state.currentWave,
-      dailyRewards: state.dailyRewards,
-      hasCompletedOnboarding: state.hasCompletedOnboarding,
-      specialEffects: state.specialEffects,
-    }));
+    saveService.startAutoSave(() => {
+      const state = useGameStore.getState();
+      return {
+        player: state.player,
+        buildings: state.buildings,
+        combat: state.combat,
+        currentWave: state.currentWave,
+        dailyRewards: state.dailyRewards,
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
+        specialEffects: state.specialEffects,
+      };
+    });
 
     return () => saveService.stopAutoSave();
   }, []);
@@ -274,7 +275,7 @@ export const GameScreen: React.FC = () => {
       setPendingReward(result);
       setShowDailyReward(true);
     }
-  }, [hasCompletedOnboarding]);
+  }, [hasCompletedOnboarding, dailyRewards]);
 
   // Check for offline earnings on mount
   useEffect(() => {
@@ -322,7 +323,8 @@ export const GameScreen: React.FC = () => {
     };
 
     checkOfflineEarnings();
-  }, [buildings, currentWave, prestigeBonuses, productionSystem, addScrap, player.buildingTier]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Listen for milestone events
   useEffect(() => {
@@ -504,20 +506,6 @@ export const GameScreen: React.FC = () => {
       unassignBuilder(buildingId);
     },
     [unassignBuilder],
-  );
-
-  const handleAssignMultiple = useCallback(
-    (buildingId: string, count: number) => {
-      assignBuildersToBuilding(buildingId, count);
-    },
-    [assignBuildersToBuilding],
-  );
-
-  const handleUnassignMultiple = useCallback(
-    (buildingId: string, count: number) => {
-      unassignBuildersFromBuilding(buildingId, count);
-    },
-    [unassignBuildersFromBuilding],
   );
 
   const handleAssignAll = useCallback(
@@ -786,15 +774,12 @@ export const GameScreen: React.FC = () => {
                 totalBuilders={player.builders.total}
                 onAssignBuilder={() => handleAssignBuilder(building.id)}
                 onUnassignBuilder={() => handleUnassignBuilder(building.id)}
-                onAssignMultiple={(count) => handleAssignMultiple(building.id, count)}
-                onUnassignMultiple={(count) => handleUnassignMultiple(building.id, count)}
                 onAssignAll={() => handleAssignAll(building.id)}
                 onFocus={() => handleFocusBuilding(building.id)}
                 onUpgrade={() => handleUpgrade(building.id)}
                 onEvolve={() => handleEvolve(building.id)}
                 onShowInfo={() => setSelectedBuildingInfo(buildingType)}
                 prestigeCount={player.prestigeCount}
-                currentWave={currentWave}
                 evolutionTier={building.evolutionTier}
                 nextEvolutionLevel={nextTier?.unlockLevel}
                 currentBuildingLevel={building.level}

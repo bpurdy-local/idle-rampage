@@ -178,7 +178,7 @@ export class PrestigeSystem {
    * Uses centralized formula from src/data/formulas/prestige.ts
    */
   getStartingScrap(ownedUpgrades: Record<string, number>, highestWave: number = 0): number {
-    const upgradeLevel = ownedUpgrades['starting_scrap'] ?? 0;
+    const upgradeLevel = ownedUpgrades.starting_scrap ?? 0;
     return calculateStartingScrapBonus(upgradeLevel, highestWave);
   }
 
